@@ -10,6 +10,7 @@ from __future__ import annotations
 import asyncio
 import base64
 import json
+import time
 import uuid
 from collections.abc import AsyncIterator
 from typing import Annotated
@@ -29,6 +30,9 @@ from app.services.watches import get_watch_for_user
 router = APIRouter(prefix="/stream", tags=["realtime"])
 MAX_STREAMS_PER_USER = 6
 HEARTBEAT = 15
+# Each open stream holds a lease it renews every heartbeat. A connection that vanished without a clean close
+# (proxy hiccup, killed process) stops renewing and frees its slot after LEASE seconds instead of an hour.
+LEASE = HEARTBEAT * 3
 
 
 def _encode_pos(pos: dict[str, str]) -> str:
@@ -78,11 +82,17 @@ async def stream(
         streams.append(watch_stream(wid))
     await session.commit()
     r = get_redis()
-    counter = f"sse:conns:{user.id}"
-    n = await r.incr(counter)
-    await r.expire(counter, 3600)
+    leases = f"sse:leases:{user.id}"
+    conn_id = uuid.uuid4().hex
+    now = time.time()
+    async with r.pipeline(transaction=True) as pipe:
+        pipe.zremrangebyscore(leases, "-inf", now)
+        pipe.zadd(leases, {conn_id: now + LEASE})
+        pipe.zcard(leases)
+        pipe.expire(leases, LEASE * 2)
+        _, _, n, _ = await pipe.execute()
     if n > MAX_STREAMS_PER_USER:
-        await r.decr(counter)
+        await r.zrem(leases, conn_id)
         raise RateLimited("Too many open live connections", retry_after=10)
     pos = _decode_pos(last_event_id or since)
     positions = {s: pos.get(s, "$") for s in streams}
@@ -106,6 +116,7 @@ async def stream(
                 except Exception:
                     await asyncio.sleep(1)
                     continue
+                await r.zadd(leases, {conn_id: time.time() + LEASE})
                 if not res:
                     yield b": ping\n\n"
                     continue
@@ -127,7 +138,7 @@ async def stream(
                     yield (f"id: {_encode_pos(positions)}\nevent: {ev.get('type', 'message')}\n"
                            f"data: {json.dumps(payload, default=str)}\n\n").encode()
         finally:
-            await r.decr(counter)
+            await r.zrem(leases, conn_id)
 
     return StreamingResponse(gen(), media_type="text/event-stream",
                              headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no", "Connection": "keep-alive"})

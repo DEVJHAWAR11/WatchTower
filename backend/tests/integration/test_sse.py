@@ -113,3 +113,29 @@ async def test_sse_orders_events_across_streams(auth, make_user, site) -> None: 
     evs = await sse(f"/v1/stream?watch={wid}&since={since}", auth(u), until=4)
     assert [e["event"] for e in evs if "event" in e and e["event"] != "ready"] == [
         "run.started", "alert.created", "run.completed", "delivery.sent"]
+
+
+async def test_stream_slots_are_leases_that_expire(client, auth, make_user) -> None:  # noqa: ANN001
+    """A connection that disappeared without closing must not block the user's live view for long."""
+    import time
+
+    from app.core.redis import get_redis
+
+    u = await make_user()
+    key = f"sse:leases:{u.id}"
+    r = get_redis()
+    now = time.time()
+    await r.zadd(key, {f"live{i}": now + 60 for i in range(6)})
+    blocked = await client.get("/v1/stream", headers=auth(u))
+    assert blocked.status_code == 429 and await r.zcard(key) == 6
+    # the same six slots, but their holders stopped renewing: they no longer count
+    await r.zadd(key, {f"live{i}": now - 1 for i in range(6)})
+
+    async def stop() -> None:
+        await publish_user(u.id, "notification", {"title": "x"})
+
+    events = await sse("/v1/stream", auth(u), until=1, on_ready=stop)
+    assert events[0]["status"] == 200 and any(e.get("event") == "notification" for e in events)
+    # stale leases were swept; at most our own lease is left, and it expires on its own within LEASE seconds
+    left = await r.zrange(key, 0, -1, withscores=True)
+    assert len(left) <= 1 and all(score > time.time() for _, score in left)
