@@ -1,0 +1,78 @@
+name: watchtower
+
+x-app: &app
+  build: {context: ., target: runtime}
+  env_file: [.env]
+  environment:
+    WT_DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/watchtower
+    WT_REDIS_URL: redis://redis:6379/0
+  depends_on:
+    postgres: { condition: service_healthy }
+    redis: { condition: service_healthy }
+  restart: unless-stopped
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: watchtower
+    ports: ["${WT_PG_PORT:-54329}:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 3s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory-policy", "noeviction"]
+    ports: ["6379:6379"]
+    volumes: [redisdata:/data]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      retries: 20
+
+  migrate:
+    <<: *app
+    command: ["alembic", "upgrade", "head"]
+    restart: "no"
+    profiles: [app]
+
+  api:
+    <<: *app
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips", "*"]
+    ports: ["8000:8000"]
+    profiles: [app]
+
+  scheduler:
+    <<: *app
+    command: ["python", "-m", "app.workers.scheduler"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:9101/metrics', timeout=2)"]
+      interval: 30s
+    profiles: [app]
+
+  worker:
+    <<: *app
+    command: ["python", "-m", "app.workers.main", "--queues", "checks,agents,notify,maintenance"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:9100/metrics', timeout=2)"]
+      interval: 30s
+    profiles: [app]
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.62.0
+    ports: ["16686:16686", "4318:4318"]
+    profiles: [observability]
+
+  prometheus:
+    image: prom/prometheus:v2.55.0
+    volumes: [./ops/prometheus.yml:/etc/prometheus/prometheus.yml:ro]
+    ports: ["9090:9090"]
+    profiles: [observability]
+
+volumes:
+  pgdata:
+  redisdata:
