@@ -1,0 +1,323 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ------------------------------------------------------------------ design tokens
+   Two themes share one vocabulary. Text tokens are checked for WCAG AA on --bg and --bg-elevated:
+   ink ≥ 12:1, ink-2 ≥ 7:1, ink-3 ≥ 4.6:1, amber-ink ≥ 4.5:1 (small text), accent-display ≥ 3:1 (large text only). */
+:root {
+  --bg: #f0ece2;
+  --bg-elevated: #f6f3eb;
+  --bg-sunken: #e7e2d6;
+  --bg-inverse: #14201b;
+  --ink: #14201b;
+  --ink-2: #3c4741;
+  --ink-3: #5c625c;
+  --ink-inverse: #f3efe5;
+  --line: #d6cfbf;
+  --line-strong: #b9b09d;
+  --primary: #1b3a2f;
+  --primary-hover: #24493b;
+  --on-primary: #f4f0e6;
+  --amber: #e29a3b;
+  --amber-hover: #d68a28;
+  --amber-soft: #f6e3c4;
+  --amber-ink: #9a5810;
+  --accent-display: #b5671a;
+  --on-amber: #1c1309;
+  --ok: #3d7a4e;
+  --ok-dot: #4f9a62;
+  --ok-soft: #dfeadb;
+  --err: #b0342a;
+  --err-dot: #d0453a;
+  --err-soft: #f5dcd6;
+  --info: #2d5f7a;
+  --focus: #b5671a;
+  --shadow: 0 1px 0 rgb(20 32 27 / 0.04), 0 8px 24px -12px rgb(20 32 27 / 0.18);
+  --shadow-lg: 0 24px 60px -24px rgb(20 32 27 / 0.35);
+  --topo: rgb(20 32 27 / 0.07);
+  --grain-opacity: 0.35;
+  /* illustration: silhouettes, lit windows, dome highlight */
+  --scene: #14201b;
+  --scene-window: #f6f3eb;
+  --scene-hi: #f6f3eb;
+  color-scheme: light;
+}
+
+.dark {
+  --bg: #0f1210;
+  --bg-elevated: #161a17;
+  --bg-sunken: #0a0c0b;
+  --bg-inverse: #ede7da;
+  --ink: #ede7da;
+  --ink-2: #c4beb0;
+  --ink-3: #9b978c;
+  --ink-inverse: #14201b;
+  --line: #272c28;
+  --line-strong: #3a403a;
+  --primary: #e8a54a;
+  --primary-hover: #f0b462;
+  --on-primary: #17110a;
+  --amber: #e8a54a;
+  --amber-hover: #f0b462;
+  --amber-soft: #2e2416;
+  --amber-ink: #f0b462;
+  --accent-display: #eba951;
+  --on-amber: #17110a;
+  --ok: #78c28a;
+  --ok-dot: #5fb173;
+  --ok-soft: #17271c;
+  --err: #f08074;
+  --err-dot: #e5584b;
+  --err-soft: #331a17;
+  --info: #8cc3e0;
+  --focus: #f0b462;
+  --shadow: 0 1px 0 rgb(0 0 0 / 0.4), 0 10px 30px -12px rgb(0 0 0 / 0.7);
+  --shadow-lg: 0 30px 70px -20px rgb(0 0 0 / 0.8);
+  --topo: rgb(237 231 218 / 0.05);
+  --grain-opacity: 0.5;
+  --scene: #020303;
+  --scene-window: #f0b462;
+  --scene-hi: #8a7350;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-elevated: var(--bg-elevated);
+  --color-sunken: var(--bg-sunken);
+  --color-inverse: var(--bg-inverse);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-ink-inverse: var(--ink-inverse);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-on-primary: var(--on-primary);
+  --color-amber: var(--amber);
+  --color-amber-hover: var(--amber-hover);
+  --color-amber-soft: var(--amber-soft);
+  --color-amber-ink: var(--amber-ink);
+  --color-accent-display: var(--accent-display);
+  --color-on-amber: var(--on-amber);
+  --color-ok: var(--ok);
+  --color-ok-dot: var(--ok-dot);
+  --color-ok-soft: var(--ok-soft);
+  --color-err: var(--err);
+  --color-err-dot: var(--err-dot);
+  --color-err-soft: var(--err-soft);
+  --color-info: var(--info);
+  --color-focus: var(--focus);
+
+  --font-sans: var(--font-grotesk), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-newsreader), "Iowan Old Style", Georgia, serif;
+  --font-mono: var(--font-martian), ui-monospace, "SFMono-Regular", monospace;
+
+  --shadow-card: var(--shadow);
+  --shadow-float: var(--shadow-lg);
+
+  --animate-sweep: sweep 7s linear infinite;
+  --animate-blink: blink 1.6s ease-in-out infinite;
+  --animate-ping-slow: ping-slow 2.4s cubic-bezier(0, 0, 0.2, 1) infinite;
+  --animate-shimmer: shimmer 1.6s linear infinite;
+
+  @keyframes sweep {
+    to { transform: rotate(360deg); }
+  }
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.35; }
+  }
+  @keyframes ping-slow {
+    0% { transform: scale(1); opacity: 0.7; }
+    80%, 100% { transform: scale(2.6); opacity: 0; }
+  }
+  @keyframes shimmer {
+    from { background-position: 200% 0; }
+    to { background-position: -200% 0; }
+  }
+}
+
+/* ------------------------------------------------------------------ base */
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    scroll-behavior: smooth;
+  }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    font-feature-settings: "ss01", "cv11";
+  }
+  ::selection {
+    background: var(--amber);
+    color: var(--on-amber);
+  }
+  :focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]) {
+    cursor: pointer;
+  }
+  h1, h2, h3 {
+    text-wrap: balance;
+  }
+  p {
+    text-wrap: pretty;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* ------------------------------------------------------------------ type */
+@utility font-display {
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
+  font-variation-settings: "opsz" 72;
+  letter-spacing: -0.025em;
+}
+
+/* Instrument-panel labels: "[01]  ALWAYS ON ACROSS THE WEB" */
+@utility label-mono {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  line-height: 1.5;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-variation-settings: "wdth" 87;
+}
+
+@utility mono-tight {
+  font-family: var(--font-mono);
+  font-variation-settings: "wdth" 80;
+  letter-spacing: -0.01em;
+}
+
+@utility accent {
+  font-style: italic;
+  color: var(--accent-display);
+}
+
+/* ------------------------------------------------------------------ surfaces */
+/* Card with instrument corner ticks (the bracket marks in the designs) */
+@utility ticked {
+  position: relative;
+  &::before,
+  &::after {
+    content: "";
+    position: absolute;
+    width: 9px;
+    height: 9px;
+    pointer-events: none;
+    border-color: var(--line-strong);
+    border-style: solid;
+  }
+  &::before {
+    top: -1px;
+    left: -1px;
+    border-width: 1px 0 0 1px;
+  }
+  &::after {
+    bottom: -1px;
+    right: -1px;
+    border-width: 0 1px 1px 0;
+  }
+}
+
+@utility topo-bg {
+  background-image: var(--topo-url);
+  background-size: 900px 900px;
+}
+
+@utility skeleton {
+  background: linear-gradient(90deg, var(--bg-sunken) 0%, var(--line) 50%, var(--bg-sunken) 100%);
+  background-size: 200% 100%;
+  animation: var(--animate-shimmer);
+  border-radius: 2px;
+}
+
+@utility scrollbar-none {
+  scrollbar-width: none;
+  &::-webkit-scrollbar { display: none; }
+}
+
+@utility grain {
+  position: relative;
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: var(--grain-opacity);
+    mix-blend-mode: multiply;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.5 0 0 0 0 0.45 0 0 0 0 0.4 0 0 0 0.09 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  }
+}
+.dark .grain::after { mix-blend-mode: screen; }
+
+/* Sonner theming */
+[data-sonner-toaster][data-sonner-theme] {
+  --normal-bg: var(--bg-elevated);
+  --normal-border: var(--line-strong);
+  --normal-text: var(--ink);
+  font-family: var(--font-sans);
+}
+
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+/* Tailwind v4 centers with the separate `translate` property, so animate `transform` alone. */
+@keyframes dialog-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.985); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes menu-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Radar blips light up as the beam passes, then fade (period matches --animate-sweep). */
+.wt-blip {
+  opacity: 0.25;
+  animation: blip 7s linear infinite;
+}
+@keyframes blip {
+  0% { opacity: 1; }
+  25% { opacity: 0.35; }
+  100% { opacity: 0.22; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wt-blip { opacity: 0.7; animation: none !important; }
+}
+
+/* Long-form text (legal, docs) */
+.prose-wt { color: var(--ink-2); font-size: 1.0625rem; line-height: 1.75; }
+.prose-wt > * + * { margin-top: 1.1em; }
+.prose-wt h2 { font-family: var(--font-display); font-variation-settings: "opsz" 48; color: var(--ink); font-size: 1.9rem; line-height: 1.15; margin-top: 2em; letter-spacing: -0.015em; }
+.prose-wt h3 { color: var(--ink); font-weight: 600; font-size: 1.1rem; margin-top: 1.6em; }
+.prose-wt ul { list-style: none; padding: 0; }
+.prose-wt ul li { position: relative; padding-left: 1.4em; margin-top: 0.5em; }
+.prose-wt ul li::before { content: ""; position: absolute; left: 0.2em; top: 0.75em; width: 6px; height: 6px; background: var(--amber); }
+.prose-wt strong { color: var(--ink); font-weight: 600; }
+.prose-wt a { color: var(--ink); text-decoration: underline; text-underline-offset: 4px; text-decoration-color: var(--line-strong); }
+.prose-wt a:hover { text-decoration-color: var(--ink); }
+.prose-wt code { font-family: var(--font-mono); font-size: 0.82em; background: var(--bg-sunken); padding: 0.15em 0.4em; border-radius: 2px; color: var(--ink); }
+.prose-wt pre { font-family: var(--font-mono); font-size: 0.8rem; line-height: 1.7; background: var(--bg-sunken); border: 1px solid var(--line); padding: 1rem 1.2rem; overflow-x: auto; color: var(--ink); }
+.prose-wt pre code { background: none; padding: 0; }
+.prose-wt table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
+.prose-wt th, .prose-wt td { border-bottom: 1px solid var(--line); padding: 0.6rem 0.5rem; text-align: left; vertical-align: top; }
+.prose-wt th { color: var(--ink); font-weight: 600; }
