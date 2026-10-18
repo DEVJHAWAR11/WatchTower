@@ -57,6 +57,7 @@ Power users can skip the agent: `POST /watches {title, spec, visibility?, catego
   - decided_by: `hash | noise | rule | triage | llm | cache | none`. Use it for "AI skipped / AI checked" badges.
 - `last_alert`, `stats` (7-day runs, AI calls, AI skip ratio, alerts, errors), `sources[]` (status/last fetch)
 - owner only: `current_version` (the spec), `pending_refinement`
+- `my_subscription`: `{role, delivery_mode, channels, muted}` when the caller follows the watch
 
 Then open `GET /stream?watch={id}` for live updates (see below).
 
@@ -95,6 +96,9 @@ then goes through moderation: `moderation_status` changes from `pending` to `app
 ## Account & settings
 `GET /me`, `PATCH /me/settings` (timezone, quiet hours, digest time, default channels, delivery mode, max alerts per
 hour, auto-tune, handle), `GET /me/usage` (plan limits and current usage, for meters), `GET /plans`,
+`GET /me/dashboard` (one call for the dashboard: totals plus, per watch, its schedule, last run outcome, alerts in
+the last 24h and a 14-bucket × 12h activity strip), `POST /me/plan-request {plan_id, note?}` (records an upgrade
+request for admins while there is no payment provider; it shows up in `GET /admin/audit?action=plan.request`),
 `GET /me/watches?role=owner|subscriber`, `GET /me/deliveries`, `GET /me/export`, `DELETE /me?confirm=DELETE`,
 `GET|POST|DELETE /me/api-tokens` (Pro).
 
@@ -131,4 +135,5 @@ clicked.
 | `notification` | user | system notices (watch paused, moderation, reminders, refinement) |
 | `refinement.proposed` | user | a suggested improvement awaits your approval |
 
-Comment lines (`: ping`) arrive every 15s as keep-alives.
+Comment lines (`: ping`) arrive every 15s as keep-alives. Each user may hold 6 open streams; a stream that
+disappears without closing frees its slot within 45s.

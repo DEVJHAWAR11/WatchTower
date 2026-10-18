@@ -152,6 +152,11 @@ class UsageOut(BaseModel):
     llm_tokens_today: int
 
 
+class PlanRequestIn(BaseModel):
+    plan_id: Literal["free", "plus", "pro"]
+    note: str | None = Field(default=None, max_length=500)
+
+
 class ApiTokenIn(BaseModel):
     name: str = Field(min_length=1, max_length=64)
     expires_in_days: int | None = Field(default=90, ge=1, le=365)
@@ -264,6 +269,8 @@ class WatchOut(Out):
     alert_count: int
     last_alert_at: datetime | None
     moderation_status: str
+    auto_tune: bool = True
+    default_delivery_mode: str = "instant"
     created_at: datetime
     updated_at: datetime
     is_owner: bool = False
@@ -356,6 +363,7 @@ class WatchStateOut(BaseModel):
     stats: dict[str, Any]
     sources: list[dict[str, Any]]
     pending_refinement: dict[str, Any] | None
+    my_subscription: dict[str, Any] | None = None
 
 
 class FeedbackIn(BaseModel):

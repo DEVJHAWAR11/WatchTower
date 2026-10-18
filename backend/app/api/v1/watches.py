@@ -209,6 +209,13 @@ async def state(watch_id: uuid.UUID, user: OptionalUser, session: DB) -> WatchSt
             .order_by(RefinementProposal.created_at.desc()).limit(1))).scalar_one_or_none()
         prop = RefinementOut.model_validate(p).model_dump(mode="json") if p else None
     runs7, llm7, skip7, match7, err7, tokens7 = agg
+    my_sub = None
+    if user is not None:
+        sub = (await session.execute(select(Subscription).where(
+            Subscription.watch_id == w.id, Subscription.user_id == user.id))).scalar_one_or_none()
+        if sub is not None:
+            my_sub = {"role": sub.role, "delivery_mode": sub.delivery_mode, "channels": sub.channels or [],
+                      "muted": bool(sub.muted)}
     return WatchStateOut(
         watch=await watch_out(session, w, user),
         current_version=VersionOut.model_validate(ver) if (ver and is_owner) else None,
@@ -224,7 +231,7 @@ async def state(watch_id: uuid.UUID, user: OptionalUser, session: DB) -> WatchSt
         stats={"runs_7d": runs7, "llm_calls_7d": llm7, "skipped_without_ai_7d": skip7, "alerts_7d": match7,
                "errors_7d": err7, "llm_tokens_7d": int(tokens7),
                "ai_skip_ratio_7d": round(1 - (llm7 / runs7), 3) if runs7 else None},
-        sources=sources, pending_refinement=prop,
+        sources=sources, pending_refinement=prop, my_subscription=my_sub,
     )
 
 

@@ -7,7 +7,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import delete, func, select, update
+from sqlalchemy import and_, delete, func, select, update
 
 from app.api.deps import DB, CurrentUser, rate_limit
 from app.core.crypto import new_api_token
@@ -19,11 +19,13 @@ from app.models import (
     AlertDelivery,
     ApiToken,
     AuditLog,
+    Check,
     Feedback,
     IntakeSession,
     Plan,
     Profile,
     PushSubscription,
+    Run,
     Subscription,
     TelegramLink,
     Watch,
@@ -35,6 +37,7 @@ from app.schemas.api import (
     ApiTokenOut,
     DeliveryOut,
     PlanOut,
+    PlanRequestIn,
     ProfileOut,
     SettingsIn,
     UsageOut,
@@ -126,11 +129,102 @@ async def my_watches(user: CurrentUser, session: DB,
     return out
 
 
+DASH_BUCKETS = 14
+DASH_BUCKET_SECONDS = 12 * 3600
+
+
+@router.get("/me/dashboard")
+async def dashboard(user: CurrentUser, session: DB) -> dict[str, Any]:
+    """One call for the dashboard: totals plus, per watch, its schedule, last outcome and a 7-day activity strip."""
+    rows = (await session.execute(
+        select(Watch, Subscription.role, Check).join(Subscription, Subscription.watch_id == Watch.id)
+        .outerjoin(Check, Check.watch_id == Watch.id)
+        .where(Subscription.user_id == user.id, Watch.status != "archived")
+        .order_by(Watch.updated_at.desc()).limit(500)
+    )).all()
+    ids = [w.id for w, _, _ in rows]
+    now = datetime.now(UTC)
+    since = now - timedelta(seconds=DASH_BUCKETS * DASH_BUCKET_SECONDS)
+    activity: dict[uuid.UUID, list[dict[str, int]]] = {
+        i: [{"runs": 0, "alerts": 0, "errors": 0} for _ in range(DASH_BUCKETS)] for i in ids}
+    last_runs: dict[uuid.UUID, Run] = {}
+    totals = {"checks_today": 0, "alerts_7d": 0, "runs_7d": 0, "ai_skipped_7d": 0}
+    alerts_24h: dict[uuid.UUID, int] = {}
+    if ids:
+        bucket = func.floor(func.extract("epoch", now - Run.started_at) / DASH_BUCKET_SECONDS)
+        agg = (await session.execute(
+            select(Run.watch_id, bucket, func.count(), func.count().filter(Run.outcome == "matched"),
+                   func.count().filter(Run.outcome.in_(("error", "blocked"))),
+                   func.count().filter(Run.llm_called.is_(False)))
+            .where(Run.watch_id.in_(ids), Run.started_at >= since).group_by(Run.watch_id, bucket)
+        )).all()
+        for wid, b, n, matched, errs, skipped in agg:
+            idx = DASH_BUCKETS - 1 - int(b)
+            if 0 <= idx < DASH_BUCKETS:
+                activity[wid][idx] = {"runs": n, "alerts": matched, "errors": errs}
+            totals["runs_7d"] += n
+            totals["alerts_7d"] += matched
+            totals["ai_skipped_7d"] += skipped
+            if int(b) < 2:
+                alerts_24h[wid] = alerts_24h.get(wid, 0) + matched
+        try:
+            from zoneinfo import ZoneInfo
+
+            tz = ZoneInfo(user.timezone or "Asia/Kolkata")
+        except Exception:  # noqa: BLE001 - unknown zone: fall back to UTC midnight
+            tz = UTC
+        midnight = now.astimezone(tz).replace(hour=0, minute=0, second=0, microsecond=0)
+        totals["checks_today"] = int(await session.scalar(select(func.count()).select_from(Run).where(
+            Run.watch_id.in_(ids), Run.started_at >= midnight)) or 0)
+        latest = (select(Run.watch_id, func.max(Run.started_at).label("ts")).where(Run.watch_id.in_(ids))
+                  .group_by(Run.watch_id).subquery())
+        for r in (await session.execute(select(Run).join(latest, and_(
+                Run.watch_id == latest.c.watch_id, Run.started_at == latest.c.ts)))).scalars():
+            last_runs[r.watch_id] = r
+    items = []
+    for w, role, chk in rows:
+        wo = WatchOut.model_validate(w)
+        wo.is_owner = w.owner_id == user.id
+        wo.is_subscribed = role == "subscriber"
+        lr = last_runs.get(w.id)
+        items.append({
+            "watch": wo.model_dump(mode="json"),
+            "schedule": {
+                "enabled": bool(chk and chk.enabled), "interval_seconds": chk.interval_seconds if chk else None,
+                "next_run_at": chk.next_run_at.isoformat() if chk and chk.enabled and chk.next_run_at else None,
+                "last_run_at": chk.last_run_at.isoformat() if chk and chk.last_run_at else None,
+                "running": bool(chk and chk.lease_until and chk.lease_until > now),
+                "consecutive_failures": chk.consecutive_failures if chk else 0,
+            },
+            "last_run": {"outcome": lr.outcome, "decided_by": lr.decided_by, "llm_called": lr.llm_called,
+                         "reason": lr.reason, "started_at": lr.started_at.isoformat(),
+                         "status": lr.status} if lr else None,
+            "alerts_24h": alerts_24h.get(w.id, 0),
+            "activity": activity.get(w.id, []),
+        })
+    active = sum(1 for w, _, _ in rows if w.status == "active")
+    return {"totals": {"watches": len(rows), "active_watches": active, **totals},
+            "bucket_hours": DASH_BUCKET_SECONDS // 3600, "items": items}
+
+
 @router.get("/me/deliveries", response_model=list[DeliveryOut])
 async def my_deliveries(user: CurrentUser, session: DB, limit: int = Query(50, ge=1, le=200)) -> list[AlertDelivery]:
     return list((await session.execute(
         select(AlertDelivery).where(AlertDelivery.user_id == user.id).order_by(AlertDelivery.created_at.desc()).limit(limit)
     )).scalars())
+
+
+@router.post("/me/plan-request", status_code=202, dependencies=[Depends(rate_limit("plan_request", 5, 86400))])
+async def plan_request(body: PlanRequestIn, user: CurrentUser, session: DB) -> dict[str, str]:
+    """Until a payment provider is wired in, upgrades are applied by an admin. This records the request for them."""
+    if body.plan_id == user.plan_id:
+        raise Conflict("You're already on that plan")
+    exists = await session.scalar(select(Plan.id).where(Plan.id == body.plan_id, Plan.is_public.is_(True)))
+    if not exists:
+        raise NotFound("Unknown plan")
+    session.add(AuditLog(actor_id=user.id, action="plan.request", target_type="user", target_id=str(user.id),
+                         meta={"plan_id": body.plan_id, "from": user.plan_id, "note": body.note}))
+    return {"status": "received", "message": "Thanks! We'll switch your plan and email you shortly."}
 
 
 # ------------------------------------------------------------------ API tokens (Pro)

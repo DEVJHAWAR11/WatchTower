@@ -5,6 +5,7 @@ import jwt
 import respx
 from httpx import Response
 
+from app.core.config import get_settings
 from app.core.db import session_scope
 from app.models import Profile
 
@@ -13,7 +14,11 @@ async def test_health_and_ready(client) -> None:  # noqa: ANN001
     assert (await client.get("/healthz")).json() == {"status": "ok"}
     r = await client.get("/readyz")
     assert r.status_code == 200 and r.json()["checks"] == {"database": "ok", "redis": "ok"}
-    assert (await client.get("/metrics")).status_code == 200
+    token = get_settings().metrics_token.get_secret_value()
+    if token:  # a local .env may protect /metrics; both cases must behave
+        assert (await client.get("/metrics")).status_code == 401
+    headers = {"Authorization": f"Bearer {token}"} if token else {}
+    assert (await client.get("/metrics", headers=headers)).status_code == 200
 
 
 async def test_profile_bootstrap_and_settings(client, auth_kit) -> None:  # noqa: ANN001
@@ -126,3 +131,48 @@ async def test_error_envelope_and_unknown_route(client) -> None:  # noqa: ANN001
     assert r.status_code == 404 and r.json()["error"]["code"] == "not_found"
     r = await client.post("/v1/auth/login", content=b"x" * 2_000_000, headers={"content-type": "application/json"})
     assert r.status_code == 413
+
+
+async def test_dashboard_aggregates_runs_per_watch(client, auth, make_user, site) -> None:  # noqa: ANN001
+    from datetime import UTC, datetime, timedelta
+
+    from app.models import Run
+    from tests.helpers import make_watch
+
+    u = await make_user()
+    wid = await make_watch(u, {"sources": [{"url": site.set("site.test", "/dash", "<p>x</p>")}], "condition": "abc"},
+                           title="Dash watch")
+    now = datetime.now(UTC)
+    async with session_scope() as s:
+        s.add(Run(watch_id=wid, status="completed", outcome="skipped_unchanged", started_at=now - timedelta(days=3)))
+        s.add(Run(watch_id=wid, status="completed", outcome="error", started_at=now - timedelta(hours=13)))
+        s.add(Run(watch_id=wid, status="completed", outcome="matched", llm_called=True, decided_by="llm",
+                  started_at=now - timedelta(minutes=5)))
+        s.add(Run(watch_id=wid, status="completed", outcome="no_match", started_at=now - timedelta(days=9)))
+    r = await client.get("/v1/me/dashboard", headers=auth(u))
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["totals"]["runs_7d"] == 3 and body["totals"]["alerts_7d"] == 1
+    assert body["totals"]["ai_skipped_7d"] == 2 and body["totals"]["active_watches"] == 1
+    item = body["items"][0]
+    assert item["watch"]["title"] == "Dash watch" and item["watch"]["is_owner"] is True
+    assert item["last_run"]["outcome"] == "matched" and item["alerts_24h"] == 1
+    strip = item["activity"]
+    assert len(strip) == 14 and strip[-1] == {"runs": 1, "alerts": 1, "errors": 0}
+    assert strip[-2]["errors"] == 1 and sum(b["runs"] for b in strip) == 3
+    other = await make_user()
+    assert (await client.get("/v1/me/dashboard", headers=auth(other))).json()["items"] == []
+
+
+async def test_plan_request_is_recorded_for_admins(client, auth, make_user, auth_kit) -> None:  # noqa: ANN001
+    u = await make_user()
+    h = auth(u)
+    assert (await client.post("/v1/me/plan-request", headers=h, json={"plan_id": "free"})).status_code == 409
+    assert (await client.post("/v1/me/plan-request", headers=h, json={"plan_id": "gold"})).status_code == 422
+    r = await client.post("/v1/me/plan-request", headers=h, json={"plan_id": "plus", "note": "for job hunting"})
+    assert r.status_code == 202, r.text
+    admin = {"Authorization": f"Bearer {auth_kit.token(uuid.uuid4(), admin=True)}"}
+    rows = (await client.get("/v1/admin/audit", headers=admin, params={"action": "plan.request"})).json()
+    assert rows[0]["meta"]["plan_id"] == "plus" and rows[0]["actor_id"] == str(u.id)
+    state = await client.get("/v1/me/dashboard", headers=h)
+    assert state.status_code == 200
