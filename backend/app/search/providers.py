@@ -35,6 +35,13 @@ class SearchBudgetExceeded(SearchError):
     pass
 
 
+class SearchQuotaExhausted(SearchError):
+    """The provider says our plan's credits are used up (Tavily 432/433, HTTP 402)."""
+
+
+_QUOTA_STATUSES = {402, 432, 433}
+
+
 class SearchProvider(Protocol):
     name: str
 
@@ -60,6 +67,8 @@ class TavilyProvider:
         headers = {"Authorization": f"Bearer {get_settings().tavily_api_key.get_secret_value()}"}
         async with (self._http or httpx.AsyncClient(timeout=15.0, trust_env=False)) as client:
             resp = await client.post("https://api.tavily.com/search", json=body, headers=headers)
+        if resp.status_code in _QUOTA_STATUSES:
+            raise SearchQuotaExhausted(f"tavily quota exhausted (http {resp.status_code})")
         if resp.status_code >= 400:
             raise SearchError(f"tavily http {resp.status_code}")
         data = resp.json()
@@ -87,6 +96,8 @@ class BraveProvider:
                    "Accept": "application/json"}
         async with (self._http or httpx.AsyncClient(timeout=15.0, trust_env=False)) as client:
             resp = await client.get("https://api.search.brave.com/res/v1/web/search", params=params, headers=headers)
+        if resp.status_code in _QUOTA_STATUSES:
+            raise SearchQuotaExhausted(f"brave quota exhausted (http {resp.status_code})")
         if resp.status_code >= 400:
             raise SearchError(f"brave http {resp.status_code}")
         data = resp.json()
@@ -110,6 +121,35 @@ class SearchService:
         if n > get_settings().search_daily_budget_calls:
             raise SearchBudgetExceeded("Daily search budget exhausted")
 
+    @staticmethod
+    def _month_key(provider: str) -> str:
+        return f"search:month:{provider}:{datetime.now(UTC).strftime('%Y%m')}"
+
+    async def _provider_has_credit(self, provider: str) -> bool:
+        cap = get_settings().search_monthly_budget.get(provider)
+        if cap is None:
+            return True
+        return int(await get_redis().get(self._month_key(provider)) or 0) < cap
+
+    async def _spend_credit(self, provider: str, *, exhausted: bool = False) -> None:
+        r = get_redis()
+        key = self._month_key(provider)
+        if exhausted:
+            cap = get_settings().search_monthly_budget.get(provider, 10**9)
+            await r.set(key, cap, ex=32 * 24 * 3600)
+            log.warning("search_provider_quota_exhausted", provider=provider)
+            return
+        if await r.incr(key) == 1:
+            await r.expire(key, 32 * 24 * 3600)
+
+    async def credits(self) -> dict[str, dict[str, int | None]]:
+        """Monthly usage per provider (admin view)."""
+        out: dict[str, dict[str, int | None]] = {}
+        for p in self.providers:
+            used = int(await get_redis().get(self._month_key(p.name)) or 0)
+            out[p.name] = {"used_this_month": used, "monthly_budget": get_settings().search_monthly_budget.get(p.name)}
+        return out
+
     async def search(self, query: str, *, max_results: int = 8, country: str | None = "IN") -> list[SearchHit]:
         q = " ".join(query.split())[:300]
         if not q:
@@ -122,15 +162,23 @@ class SearchService:
         usable = [p for p in self.providers if p.available()]
         if not usable:
             raise SearchError("No search provider configured")
+        usable = [p for p in usable if await self._provider_has_credit(p.name)]
+        if not usable:
+            raise SearchBudgetExceeded("Monthly search credits exhausted on every provider")
         await self._take_budget()
         last: Exception | None = None
         for p in usable:
             try:
+                await self._spend_credit(p.name)
                 hits = await p.search(q, max_results=max_results, country=country)
                 SEARCH_CALLS.labels(provider=p.name, status="ok").inc()
                 clean = _clean_hits(hits)
                 await cache_set_json(key, [h.__dict__ for h in clean], get_settings().search_cache_ttl_seconds)
                 return clean
+            except SearchQuotaExhausted as e:
+                SEARCH_CALLS.labels(provider=p.name, status="quota").inc()
+                await self._spend_credit(p.name, exhausted=True)
+                last = e
             except (SearchError, httpx.HTTPError, ValueError) as e:
                 SEARCH_CALLS.labels(provider=p.name, status="error").inc()
                 log.warning("search_provider_failed", provider=p.name, error=str(e))

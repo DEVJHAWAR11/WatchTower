@@ -11,7 +11,9 @@ from sqlalchemy import func, or_, select, text, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.api.deps import DB, AdminUser
+from app.core.config import get_settings
 from app.core.errors import NotFound
+from app.llm import ratelimit
 from app.llm.client import spend_today_usd
 from app.models import (
     AbuseReport,
@@ -33,6 +35,7 @@ from app.schemas.api import (
     ProfileOut,
     WatchOut,
 )
+from app.search.providers import get_search
 from app.services.plans import invalidate_plan_cache
 from app.services.watches import set_status
 from app.workers.queue import ALL_QUEUES, queue_depth
@@ -194,6 +197,9 @@ async def system(admin: AdminUser, session: DB) -> dict[str, Any]:
         "totals": {"active_users": counts[0], "active_watches": counts[1], "public_watches": counts[2],
                    "alerts_24h": counts[3], "failed_deliveries_24h": counts[4]},
         "llm_spend_today_usd": round(await spend_today_usd(), 4),
+        "llm_quota": {m: await ratelimit.status(m)
+                      for m in dict.fromkeys([get_settings().llm_model_smart, get_settings().llm_model_fast])},
+        "search_credits": await get_search().credits(),
     }
 
 

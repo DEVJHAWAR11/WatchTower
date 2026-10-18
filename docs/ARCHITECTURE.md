@@ -86,6 +86,16 @@ The judge must return a **verbatim evidence quote**. It is verified against the 
 found. Dedup uses a fingerprint of the event key plus similarity and evidence containment against recent alerts.
 LLM outages or budget limits *defer* the run without updating state, so a change is never silently swallowed.
 
+**Provider quotas.** Groq limits each model to requests/day and tokens/minute (free tier: 1,000 RPD and 8,000 TPM
+for gpt-oss-20b/120b). `app/llm/ratelimit.py` mirrors both buckets in Redis, shared by every process: each call
+reserves its estimated tokens first (prompt + completion budget, refunded to actual afterwards), and every response's
+`x-ratelimit-*` headers re-sync the buckets to Groq's real numbers. A 429 blocks that model for all workers until
+its reset time. When a model is at quota the call waits briefly, then moves to the other gpt-oss model (separate
+quota); if both are full, the check is *deferred* to when capacity returns. 15% of daily requests are reserved for
+interactive work (intake), so background checks can never lock users out of creating watches. Search has a daily
+cap (spread the credits) plus per-provider monthly credit budgets (Tavily 1,000, Brave 2,000), and a provider that
+reports its plan exhausted is skipped for the rest of the month. `GET /v1/admin/system` shows both.
+
 ### Act: follow-up before notifying (`app/agents/act.py`)
 `analyze → validate → propose`, run under a timeout. It extracts key details, deadlines (each one must be backed by
 a quoted line from the page) and links (only links that actually appear on the page). It also writes a comparison

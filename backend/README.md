@@ -57,7 +57,7 @@ app/
   core/          config, db (unit of work + after-commit hooks), redis primitives, auth (JWKS), crypto, errors, logging
   models/        SQLAlchemy models          schemas/  WatchSpec + API models
   fetch/         SSRF-safe client, robots + politeness, extraction, normalisation, diff, block detection, render pool
-  llm/           Groq client (ladder, cache, budgets), prompt-injection defences
+  llm/           Groq client (ladder, cache, budgets, shared rate governor), prompt-injection defences
   search/        Tavily/Brave + India source registry + ATS/feed patterns
   agents/        intake, evaluate, act, refine graphs; prompts; output schemas; deterministic predicates
   notify/        render (email/push/telegram/webhook), channels, dispatch (fan-out, digests, quiet hours)

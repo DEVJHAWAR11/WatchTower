@@ -32,7 +32,7 @@ from app.core.logging import get_logger
 from app.fetch.diff import TextDiff, diff_lines, new_items
 from app.fetch.normalize import content_hash, line_signature
 from app.fetch.service import SourceUnavailable, fetch_source, view_for
-from app.llm.client import LLMBudgetExceeded, LLMError, get_llm
+from app.llm.client import LLMBudgetExceeded, LLMError, LLMRateLimited, get_llm
 from app.llm.safety import quote_in_text, scan_and_strip
 from app.models import Alert, Profile, Run, Watch, WatchSourceState, WatchVersion
 from app.observability.metrics import AGENT_NODE_SECONDS, ALERTS_TOTAL, RUN_DURATION, RUNS_TOTAL
@@ -67,6 +67,7 @@ class EvalState(TypedDict, total=False):
     source_errors: list[dict[str, Any]]
     done: bool
     defer: bool
+    llm_retry_after: int | None
     outcome: str
     decided_by: str
     reason: str
@@ -328,13 +329,18 @@ def _context(v: dict[str, Any], spec: WatchSpec, max_chars: int = MAX_CONTEXT_CH
 
 
 def _llm_error_result(state: EvalState, node: str, e: Exception, t0: float) -> dict[str, Any]:
-    if isinstance(e, LLMBudgetExceeded):
+    extra: dict[str, Any] = {}
+    if isinstance(e, LLMRateLimited):
+        why = "AI check postponed: shared AI capacity is busy. The change will be re-checked shortly."
+        outcome = "deferred"
+        extra["llm_retry_after"] = int(e.retry_after) + 5
+    elif isinstance(e, LLMBudgetExceeded):
         why = f"AI check postponed: {e}. The change will be re-checked later."
         outcome = "deferred"
     else:
         why = "AI service unavailable; the change will be re-checked on the next run (no false 'no change')."
         outcome = "error"
-    return {"done": True, "defer": True, "outcome": outcome, "decided_by": "none", "reason": why,
+    return {"done": True, "defer": True, "outcome": outcome, "decided_by": "none", "reason": why, **extra,
             "steps": [_step(node, "failed", why, t0, error=type(e).__name__)]}
 
 
@@ -643,7 +649,7 @@ async def run_evaluation(watch_id: uuid.UUID, *, trigger: str = "schedule") -> R
     decided_by = final.get("decided_by") or "none"
     reason = final.get("reason") or ""
     alert_id = final.get("alert_id")
-    retry_after = None
+    retry_after = final.get("llm_retry_after")
     for err in final.get("source_errors") or []:
         if err.get("retry_after"):
             retry_after = max(retry_after or 0, int(err["retry_after"]))

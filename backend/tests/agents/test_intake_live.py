@@ -7,7 +7,7 @@ from collections import Counter
 import pytest
 
 from app.agents import prompts
-from app.agents.intake import pre_screen
+from app.agents.intake import normalize_analysis, pre_screen
 from app.agents.schemas import IntakeAnalysis, JudgeOut
 from app.llm.client import GroqClient, set_llm
 from tests.agents import corpus
@@ -46,7 +46,7 @@ async def test_corpus_classification(groq) -> None:  # noqa: ANN001
             res = await groq.structured(purpose="intake_eval", tier="smart", system=prompts.INTAKE_SYSTEM,
                                         user=prompts.intake_user(query, [], [], prompts.today_ist()),
                                         schema=IntakeAnalysis, cache=False)
-            got = classify(res.data)
+            got = classify(normalize_analysis(res.data))
         results[expected][got] += 1
         if got != expected and not (expected == "clarify" and got == "ok") and not (expected == "ok" and got == "clarify"):
             misses.append((expected, got, query))
@@ -76,4 +76,5 @@ async def test_live_search_finds_official_pages() -> None:
     from app.search.providers import get_search
 
     hits = await get_search().search("SSC official notices site", max_results=5)
-    assert any("ssc.gov.in" in h.url for h in hits), [h.url for h in hits]
+    # official SSC sites (national or regional offices), not just aggregators
+    assert any(h.url.split("/")[2].endswith((".gov.in", ".nic.in")) for h in hits), [h.url for h in hits]

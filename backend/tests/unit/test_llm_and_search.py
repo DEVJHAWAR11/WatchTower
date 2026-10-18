@@ -85,8 +85,9 @@ async def test_rate_limit_falls_down_the_ladder(groq, respx_mock, monkeypatch) -
 
     respx_mock.post(GROQ).mock(side_effect=handler)
     r = await groq.structured(purpose="t", tier="smart", system="s", user="u4", schema=Out)
-    assert r.data.answer == "fallback" and r.model == "llama-3.3-70b-versatile"
-    assert calls == ["openai/gpt-oss-120b", "openai/gpt-oss-120b", "llama-3.3-70b-versatile"]
+    assert r.data.answer == "fallback" and r.model == "openai/gpt-oss-20b"
+    # a 429 blocks the model for everyone and goes straight to the next model (own quota), no hammering
+    assert calls == ["openai/gpt-oss-120b", "openai/gpt-oss-20b"]
 
 
 async def test_outage_raises_unavailable(groq, respx_mock, monkeypatch) -> None:  # noqa: ANN001

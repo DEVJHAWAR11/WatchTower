@@ -25,6 +25,7 @@ from pydantic import BaseModel, ValidationError
 from app.core.config import get_settings
 from app.core.logging import get_logger
 from app.core.redis import cache_get_json, cache_set_json, get_redis
+from app.llm import ratelimit
 from app.observability.metrics import LLM_CALLS, LLM_COST, LLM_LATENCY, LLM_TOKENS
 
 log = get_logger(__name__)
@@ -50,6 +51,20 @@ class LLMBudgetExceeded(LLMError):
 
 class LLMOutputInvalid(LLMError):
     code = "llm_invalid_output"
+
+
+class LLMRateLimited(LLMError):
+    """Every model in the ladder is at its Groq quota; retry after `retry_after` seconds (not a failure)."""
+
+    code = "llm_rate_limited"
+
+    def __init__(self, message: str, *, retry_after: float):
+        super().__init__(message)
+        self.retry_after = retry_after
+
+
+# Someone is waiting on these; background checks must leave quota for them.
+INTERACTIVE_PURPOSES = frozenset({"intake", "rank_sources", "dry_run", "moderation"})
 
 
 @dataclass
@@ -143,6 +158,12 @@ class GroqClient:
     def _model_for(self, tier: str) -> str:
         return self.s.llm_model_fast if tier == "fast" else self.s.llm_model_smart
 
+    def _ladder(self, tier: str) -> list[str]:
+        primary = self._model_for(tier)
+        other = self.s.llm_model_smart if tier == "fast" else self.s.llm_model_fast
+        fallback = self.s.llm_model_fallback or other
+        return [primary] + ([fallback] if fallback and fallback != primary else [])
+
     def cost_of(self, model: str, prompt_t: int, completion_t: int) -> float:
         pin, pout = self.s.llm_pricing.get(model, (0.6, 0.8))
         return (prompt_t * pin + completion_t * pout) / 1_000_000
@@ -160,7 +181,8 @@ class GroqClient:
                 raise LLMBudgetExceeded("Daily AI usage limit reached for your plan", code="user_budget")
 
     async def _call(self, model: str, messages: list[dict[str, str]], schema: type[BaseModel], max_tokens: int,
-                    temperature: float) -> tuple[str, dict[str, Any]]:
+                    temperature: float, reserved: int = 0) -> tuple[str, dict[str, Any]]:
+        """One HTTP call. Keeps the shared rate governor in sync with Groq's own counters."""
         body: dict[str, Any] = {
             "model": model,
             "messages": messages,
@@ -179,7 +201,21 @@ class GroqClient:
         headers = {"Authorization": f"Bearer {self.s.groq_api_key.get_secret_value()}"}
         async with self._sem:
             resp = await self._http.post("/chat/completions", json=body, headers=headers)
-        if resp.status_code == 429 or resp.status_code >= 500:
+        if resp.status_code == 200 and reserved:
+            try:
+                u = resp.json().get("usage") or {}
+                used = int(u.get("prompt_tokens", 0) or 0) + int(u.get("completion_tokens", 0) or 0)
+            except (ValueError, AttributeError):
+                used = 0
+            if used:
+                await ratelimit.refund(model, reserved - used)  # before the sync, so Groq's numbers win
+        await ratelimit.sync_from_headers(model, resp.headers)
+        if resp.status_code == 429:
+            wait = (ratelimit.parse_duration(resp.headers.get("retry-after"))
+                    or ratelimit.parse_duration(resp.headers.get("x-ratelimit-reset-tokens")) or 10.0)
+            await ratelimit.block_for(model, wait, "429")
+            raise LLMRateLimited(f"Groq rate limit on {model}", retry_after=wait)
+        if resp.status_code >= 500:
             ra = resp.headers.get("retry-after", "")
             raise LLMUnavailable(f"Groq {resp.status_code}", code=f"http_{resp.status_code}|{ra}")
         if resp.status_code == 400:
@@ -220,35 +256,45 @@ class GroqClient:
                     pass
         await self._check_budget(plan_id, user_id, token_limit_per_day)
 
-        sys_msg = (
-            f"{system}\n\nRespond with a single JSON object that conforms to this JSON schema. No prose, no markdown."
-            f"\nJSON schema:\n{schema_json}"
-        )
-        messages = [{"role": "system", "content": sys_msg}, {"role": "user", "content": user}]
-        models = [primary] + [m for m in (self.s.llm_model_fallback,) if m and m != primary]
+        instr = f"{system}\n\nRespond with a single JSON object that conforms to this JSON schema. No prose, no markdown."
+        priority = (ratelimit.PRIORITY_INTERACTIVE if purpose in INTERACTIVE_PURPOSES
+                    else ratelimit.PRIORITY_BACKGROUND)
+        max_wait = (self.s.llm_max_wait_interactive_s if priority == ratelimit.PRIORITY_INTERACTIVE
+                    else self.s.llm_max_wait_background_s)
         last_err: Exception | None = None
-        for model in models:
+        soonest: float | None = None  # earliest time a model frees up, when every model is at quota
+        for model in self._ladder(tier):
             attempt = 0
             repair_used = False
+            # Models with native json_schema get the schema through response_format; repeating it in the prompt
+            # costs ~40% more prompt tokens against a tight tokens/minute quota for no accuracy gain.
+            sys_msg = instr if model in self.s.llm_strict_schema_models else f"{instr}\nJSON schema:\n{schema_json}"
+            messages = [{"role": "system", "content": sys_msg}, {"role": "user", "content": user}]
             msgs = list(messages)
             while attempt < 3:
                 attempt += 1
+                est = ratelimit.estimate_tokens(sum(len(m["content"]) for m in msgs), max_tokens)
+                wait = await ratelimit.acquire(model, est, priority, max_wait)
+                if wait > 0:
+                    soonest = wait if soonest is None else min(soonest, wait)
+                    log.info("llm_quota_wait", model=model, purpose=purpose, wait_s=round(wait, 1))
+                    break  # this model is at quota: try the next one
                 t0 = time.monotonic()
                 try:
-                    content, usage = await self._call(model, msgs, schema, max_tokens, temperature)
+                    content, usage = await self._call(model, msgs, schema, max_tokens, temperature, reserved=est)
+                except LLMRateLimited as e:
+                    LLM_CALLS.labels(model=model, purpose=purpose, status="rate_limited").inc()
+                    soonest = e.retry_after if soonest is None else min(soonest, e.retry_after)
+                    break
                 except LLMUnavailable as e:
                     last_err = e
                     LLM_CALLS.labels(model=model, purpose=purpose, status="unavailable").inc()
                     await record_usage(model, purpose, 0, 0, 0.0, error=True)
                     if e.code == "auth":
                         raise
-                    retry_after = e.code.split("|", 1)[1] if "|" in e.code else ""
-                    delay = min(float(retry_after), 20.0) if retry_after.replace(".", "").isdigit() else (
-                        0.5 * 2 ** attempt + random.random()
-                    )
                     if attempt >= 2:
                         break  # go down the ladder
-                    await asyncio.sleep(delay)
+                    await asyncio.sleep(0.5 * 2 ** attempt + random.random())
                     continue
                 except (httpx.TimeoutException, httpx.TransportError) as e:
                     last_err = LLMUnavailable(f"Groq transport error: {type(e).__name__}")
@@ -292,6 +338,8 @@ class GroqClient:
                                          self.s.llm_cache_ttl_seconds)
                 return LLMResult(data=data, model=model, prompt_tokens=pt, completion_tokens=ct, cost_usd=cost,
                                  latency_ms=int(latency * 1000))
+        if soonest is not None and last_err is None:
+            raise LLMRateLimited("AI capacity is busy right now", retry_after=soonest)
         if isinstance(last_err, LLMError):
             raise last_err
         raise LLMUnavailable("All models failed")

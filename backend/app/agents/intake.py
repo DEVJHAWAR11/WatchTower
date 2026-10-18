@@ -33,7 +33,7 @@ from app.fetch.normalize import content_hash
 from app.fetch.service import SourceUnavailable, fetch_source
 from app.fetch.ssrf import SSRFBlocked, validate_url
 from app.fetch.urls import canonicalize_url
-from app.llm.client import LLMError, get_llm
+from app.llm.client import LLMError, LLMRateLimited, get_llm
 from app.llm.safety import quote_in_text, scan_and_strip
 from app.models import IntakeSession, Profile, WatchSourceState
 from app.realtime.events import publish_user
@@ -142,6 +142,15 @@ def pre_screen(query: str) -> tuple[str, str] | None:
     return None
 
 
+def normalize_analysis(a: IntakeAnalysis) -> IntakeAnalysis:
+    """The model often "refuses" the user's own private data (their orders, inbox, credit score). That isn't
+    harmful, just not watchable: answer with the feasibility explanation instead of a harm refusal."""
+    if (a.safety == "refuse" and a.safety_category in ("none", "other")
+            and a.feasibility in ("not_web_observable", "needs_login")):
+        a.safety = "allowed"
+    return a
+
+
 def _refusal_message(category: str) -> str:
     return {
         "stalking_private_person": "I can't help monitor a private person's activity or whereabouts. I can watch public "
@@ -172,11 +181,16 @@ async def node_analyze(state: IntakeState) -> dict[str, Any]:
             schema=IntakeAnalysis, max_tokens=1800, **_llm_kwargs(state),
         )
     except LLMError as e:
-        msg = ("Our AI is busy right now. Please try again in a few minutes."
-               if e.code != "user_budget" else "You've reached today's AI usage limit for your plan.")
+        if e.code == "user_budget":
+            msg = "You've reached today's AI usage limit for your plan."
+        elif isinstance(e, LLMRateLimited):
+            mins = max(1, round(e.retry_after / 60))
+            msg = f"Our AI is at capacity right now. Please try again in about {mins} minute{'s' if mins > 1 else ''}."
+        else:
+            msg = "Our AI is busy right now. Please try again in a few minutes."
         await _update_session(state, "failed", "done", {"message": msg, "reason_code": e.code})
         return {"status": "failed", "message": msg}
-    a = res.data
+    a = normalize_analysis(res.data)
     upd: dict[str, Any] = {"analysis": a.model_dump()}
     if a.safety == "refuse":
         msg = _refusal_message(a.safety_category)
@@ -240,7 +254,9 @@ async def node_discover(state: IntakeState) -> dict[str, Any]:
             cands.append({"url": url, "title": f"{a.company} careers ({name})", "snippet": "", "origin": "ats",
                           "kind": "json"})
     if not state.get("urls"):
-        queries = a.search_queries[:2] or [a.condition or state["query"]]
+        # Known official sources already found: one search is enough to fill gaps (search credits are scarce).
+        n_queries = 1 if any(c["origin"] in ("registry", "ats", "feed") for c in cands) else 2
+        queries = a.search_queries[:n_queries] or [a.condition or state["query"]]
         for q in queries:
             try:
                 hits = await get_search().search(q, max_results=6, country="IN")

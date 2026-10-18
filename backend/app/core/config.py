@@ -47,7 +47,8 @@ class Settings(BaseSettings):
     groq_base_url: str = "https://api.groq.com/openai/v1"
     llm_model_fast: str = "openai/gpt-oss-20b"
     llm_model_smart: str = "openai/gpt-oss-120b"
-    llm_model_fallback: str = "llama-3.3-70b-versatile"
+    # Empty = fall back to the other tier's model (each Groq model has its own quota, so this doubles headroom).
+    llm_model_fallback: str = ""
     llm_strict_schema_models: CsvList = Field(
         default_factory=lambda: ["openai/gpt-oss-20b", "openai/gpt-oss-120b"]
     )
@@ -68,6 +69,14 @@ class Settings(BaseSettings):
     llm_daily_budget_usd: float = 10.0  # soft cap: free tier degrades to rule-only beyond this
     llm_hard_budget_multiplier: float = 2.0  # hard cap for everyone
     llm_cache_ttl_seconds: int = 7 * 24 * 3600
+    # Groq account limits per model: (requests/day, tokens/minute). "*" is the default for unlisted models.
+    # Defaults are the free tier; raise them when the account is upgraded (responses re-sync these anyway).
+    llm_rate_limits: dict[str, tuple[int, int]] = Field(
+        default_factory=lambda: {"*": (1000, 8000)}
+    )
+    llm_interactive_reserve_fraction: float = 0.15  # share of daily requests background checks may not touch
+    llm_max_wait_interactive_s: float = 20.0
+    llm_max_wait_background_s: float = 30.0
     judge_min_confidence: float = 0.6
     triage_min_diff_chars: int = 1500
 
@@ -75,7 +84,9 @@ class Settings(BaseSettings):
     tavily_api_key: SecretStr = SecretStr("")
     brave_api_key: SecretStr = SecretStr("")
     search_cache_ttl_seconds: int = 24 * 3600
-    search_daily_budget_calls: int = 2000
+    search_daily_budget_calls: int = 60  # all providers; spreads the monthly credits over the month
+    # Credits per calendar month per provider (Tavily free = 1000; Brave free = 2000). Remove a key for no cap.
+    search_monthly_budget: dict[str, int] = Field(default_factory=lambda: {"tavily": 1000, "brave": 2000})
 
     # --- fetching ---
     fetch_user_agent: str = "WatchtowerBot/1.0 (+https://watchtower.app/bot)"
