@@ -1,0 +1,7 @@
+{% extends "_base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<h1 style="margin:0 0 12px;font-size:20px">{{ title }}</h1>
+<p style="font-size:15px;line-height:1.55;white-space:pre-wrap">{{ body }}</p>
+{% if link %}<p style="margin:20px 0"><a href="{{ link }}" style="background:#2457d6;color:#fff;text-decoration:none;padding:10px 16px;border-radius:8px;font-size:14px">Open</a></p>{% endif %}
+{% endblock %}

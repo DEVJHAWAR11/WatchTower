@@ -1,0 +1,33 @@
+{% extends "_base.html" %}
+{% block title %}{{ m.title }}{% endblock %}
+{% block content %}
+<p style="margin:0 0 4px;font-size:12px;color:#7a828e;text-transform:uppercase;letter-spacing:.04em">{{ m.watch_title }}</p>
+<h1 style="margin:0 0 12px;font-size:20px;line-height:1.3">{{ m.title }}</h1>
+<p style="margin:0 0 16px;font-size:15px;line-height:1.55">{{ m.summary }}</p>
+{% if m.deadlines %}
+<div style="background:#fff7e6;border-radius:8px;padding:12px 14px;margin-bottom:16px">
+{% for label, when in m.deadlines %}<p style="margin:2px 0;font-size:14px">⏰ <b>{{ label }}</b>: {{ when }}</p>{% endfor %}
+</div>
+{% endif %}
+{% if m.details %}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;margin-bottom:16px">
+{% for k, v in m.details %}<tr><td style="padding:6px 0;color:#5b636e;width:38%;vertical-align:top">{{ k }}</td><td style="padding:6px 0">{{ v }}</td></tr>{% endfor %}
+</table>
+{% endif %}
+{% if m.comparison %}<p style="font-size:14px;line-height:1.5"><b>Compared to before:</b> {{ m.comparison }}</p>{% endif %}
+{% if m.checklist %}<p style="font-size:14px;margin-bottom:4px"><b>Next steps</b></p><ul style="font-size:14px;line-height:1.5;margin-top:0">{% for c in m.checklist %}<li>{{ c }}</li>{% endfor %}</ul>{% endif %}
+{% if m.draft %}<p style="font-size:14px;margin-bottom:4px"><b>Draft ready for you</b></p><pre style="white-space:pre-wrap;background:#f5f6f8;border-radius:8px;padding:12px;font-size:13px">{{ m.draft }}</pre>{% endif %}
+{% if m.pending_actions %}
+<div style="border:1px solid #d7dbe0;border-radius:8px;padding:12px 14px;margin:16px 0">
+<p style="margin:0 0 6px;font-size:14px"><b>Waiting for your approval</b></p>
+{% for a in m.pending_actions %}<p style="margin:2px 0;font-size:14px">• {{ a }}</p>{% endfor %}
+</div>
+{% endif %}
+{% if m.links %}<p style="font-size:14px">{% for name, url in m.links %}<a href="{{ url }}" style="color:#2457d6">{{ name }}</a>{% if not loop.last %} · {% endif %}{% endfor %}</p>{% endif %}
+{% if m.act_note %}<p style="font-size:13px;color:#7a828e"><i>{{ m.act_note }}</i></p>{% endif %}
+<p style="margin:20px 0">
+<a href="{{ m.app_url }}" style="background:#2457d6;color:#fff;text-decoration:none;padding:10px 16px;border-radius:8px;font-size:14px;display:inline-block">Open in Watchtower</a>
+<a href="{{ m.source_url }}" style="color:#2457d6;font-size:14px;margin-left:12px">View source</a>
+</p>
+<p style="font-size:13px;color:#5b636e">Was this useful? <a href="{{ relevant_url }}" style="color:#2457d6">👍 Yes</a> · <a href="{{ irrelevant_url }}" style="color:#2457d6">👎 Not relevant</a> (helps this watch get smarter)</p>
+{% endblock %}

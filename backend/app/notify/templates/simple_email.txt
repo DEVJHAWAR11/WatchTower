@@ -1,0 +1,8 @@
+{{ title }}
+
+{{ body }}
+{% if link %}
+
+Open: {{ link }}{% endif %}
+
+Unsubscribe: {{ unsubscribe_url }}

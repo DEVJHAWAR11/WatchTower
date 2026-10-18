@@ -1,0 +1,11 @@
+Your Watchtower digest - {{ date_label }} ({{ items|length }} updates)
+{% for m in items %}
+
+== {{ m.title }} ==
+Watch: {{ m.watch_title }}
+{{ m.summary }}{% for label, when in m.deadlines %}
+DEADLINE - {{ label }}: {{ when }}{% endfor %}
+Source: {{ m.source_url }}
+Open: {{ m.app_url }}{% endfor %}
+
+Unsubscribe: {{ unsubscribe_url }}

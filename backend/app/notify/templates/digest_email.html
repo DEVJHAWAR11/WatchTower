@@ -1,0 +1,17 @@
+{% extends "_base.html" %}
+{% block title %}Your Watchtower digest{% endblock %}
+{% block content %}
+<h1 style="margin:0 0 4px;font-size:20px">Your daily digest</h1>
+<p style="margin:0 0 20px;font-size:13px;color:#7a828e">{{ date_label }} · {{ items|length }} update{{ "s" if items|length != 1 else "" }}</p>
+{% for m in items %}
+<div style="border-top:1px solid #eceff2;padding:14px 0">
+<p style="margin:0 0 2px;font-size:12px;color:#7a828e">{{ m.watch_title }}</p>
+<p style="margin:0 0 6px;font-size:16px"><b><a href="{{ m.app_url }}" style="color:#1a1d21;text-decoration:none">{{ m.title }}</a></b></p>
+<p style="margin:0 0 6px;font-size:14px;line-height:1.5">{{ m.summary }}</p>
+{% for label, when in m.deadlines %}<p style="margin:2px 0;font-size:13px">⏰ {{ label }}: <b>{{ when }}</b></p>{% endfor %}
+{% if m.pending_actions %}<p style="margin:4px 0;font-size:13px">✅ {{ m.pending_actions|length }} action(s) waiting for approval</p>{% endif %}
+<p style="margin:6px 0 0;font-size:13px"><a href="{{ m.source_url }}" style="color:#2457d6">Source</a></p>
+</div>
+{% endfor %}
+<p style="margin:20px 0"><a href="{{ app_url }}" style="background:#2457d6;color:#fff;text-decoration:none;padding:10px 16px;border-radius:8px;font-size:14px">Open Watchtower</a></p>
+{% endblock %}

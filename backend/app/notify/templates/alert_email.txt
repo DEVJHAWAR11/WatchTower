@@ -1,0 +1,31 @@
+{{ m.title }}
+Watch: {{ m.watch_title }}
+
+{{ m.summary }}
+{% for label, when in m.deadlines %}
+DEADLINE - {{ label }}: {{ when }}{% endfor %}
+{% for k, v in m.details %}
+{{ k }}: {{ v }}{% endfor %}
+{% if m.comparison %}
+
+Compared to before: {{ m.comparison }}{% endif %}
+{% if m.checklist %}
+
+Next steps:{% for c in m.checklist %}
+- {{ c }}{% endfor %}{% endif %}
+{% if m.draft %}
+
+Draft:
+{{ m.draft }}{% endif %}
+{% if m.pending_actions %}
+
+Waiting for your approval:{% for a in m.pending_actions %}
+- {{ a }}{% endfor %}{% endif %}
+{% for name, url in m.links %}
+{{ name }}: {{ url }}{% endfor %}
+
+Source: {{ m.source_url }}
+Open: {{ m.app_url }}
+Useful? Yes: {{ relevant_url }}  /  Not relevant: {{ irrelevant_url }}
+
+Unsubscribe: {{ unsubscribe_url }}
