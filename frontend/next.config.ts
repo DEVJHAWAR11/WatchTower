@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const isProd = process.env.NODE_ENV === "production";
+// Only force HTTPS when the site is actually served over it, otherwise `next start` on http://localhost hangs on upgraded requests.
+const https = isProd && (process.env.NEXT_PUBLIC_SITE_URL ?? "").startsWith("https://");
 
 // The browser only ever talks to this origin (the /v1 gateway proxies the API), so connect-src can stay 'self'.
 const csp = [
@@ -16,7 +18,7 @@ const csp = [
   "base-uri 'self'",
   "form-action 'self'",
   "object-src 'none'",
-  ...(isProd ? ["upgrade-insecure-requests"] : []),
+  ...(https ? ["upgrade-insecure-requests"] : []),
 ].join("; ");
 
 const securityHeaders = [
@@ -26,7 +28,7 @@ const securityHeaders = [
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=(), usb=()" },
   { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
-  ...(isProd ? [{ key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" }] : []),
+  ...(https ? [{ key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" }] : []),
 ];
 
 const nextConfig: NextConfig = {

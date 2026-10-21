@@ -21,7 +21,7 @@ export default function Home() {
       <LiveDemo />
       <CommunitySection />
       <AlertPreview />
-      <section id="pricing" aria-labelledby="pricing-title" className="relative scroll-mt-20 border-t border-line py-24 sm:py-32">
+      <section id="pricing" aria-labelledby="pricing-title" className="defer-paint relative scroll-mt-20 border-t border-line py-24 sm:py-32">
         <div className="mx-auto max-w-[1240px] px-4 sm:px-8">
           <Reveal className="text-center">
             <SectionLabel index={6} className="items-center">Pricing</SectionLabel>
@@ -52,7 +52,7 @@ async function PlansBlock() {
 
 function CommunitySection() {
   return (
-    <section aria-labelledby="community-title" className="relative overflow-hidden border-t border-line py-24 sm:py-32">
+    <section aria-labelledby="community-title" className="defer-paint relative overflow-hidden border-t border-line py-24 sm:py-32">
       <Topo />
       <div className="relative mx-auto max-w-[1440px] px-4 sm:px-8 lg:px-12">
         <div className="grid gap-8 lg:grid-cols-[1.5fr_1fr] lg:items-end">

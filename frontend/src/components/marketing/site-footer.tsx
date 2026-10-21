@@ -35,7 +35,7 @@ const COLS = [
 
 export function SiteFooter() {
   return (
-    <footer className="relative border-t border-line">
+    <footer className="defer-paint relative border-t border-line">
       <div className="mx-auto grid max-w-[1440px] gap-12 px-4 py-16 sm:px-8 lg:grid-cols-[1.2fr_2fr] lg:px-12">
         <div className="space-y-5">
           <Logo />
