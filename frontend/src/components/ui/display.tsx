@@ -35,7 +35,7 @@ export function Badge({ tone = "neutral", className, children, mono = true }: { 
     <span
       className={cn(
         "inline-flex h-6 items-center gap-1.5 whitespace-nowrap rounded-[2px] border px-2",
-        mono ? "font-mono text-[10.5px] uppercase tracking-[0.1em] [font-variation-settings:'wdth'_87]" : "text-xs",
+        mono ? "font-mono text-[10.5px] uppercase tracking-[0.1em]" : "text-xs",
         badgeTones[tone],
         className,
       )}

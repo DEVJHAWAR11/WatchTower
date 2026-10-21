@@ -1,19 +1,12 @@
 import type { Metadata, Viewport } from "next";
-import { Martian_Mono, Newsreader, Schibsted_Grotesk } from "next/font/google";
+import { Geist, Geist_Mono } from "next/font/google";
 
 import { Providers } from "@/components/providers";
 
 import "./globals.css";
 
-const display = Newsreader({
-  subsets: ["latin"],
-  variable: "--font-newsreader",
-  axes: ["opsz"],
-  style: ["normal", "italic"],
-  display: "swap",
-});
-const sans = Schibsted_Grotesk({ subsets: ["latin"], variable: "--font-grotesk", display: "swap" });
-const mono = Martian_Mono({ subsets: ["latin"], variable: "--font-martian", axes: ["wdth"], display: "swap" });
+const sans = Geist({ subsets: ["latin"], variable: "--font-geist", display: "swap" });
+const mono = Geist_Mono({ subsets: ["latin"], variable: "--font-geist-mono", display: "swap" });
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
 
@@ -47,7 +40,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en-IN" suppressHydrationWarning className={`${display.variable} ${sans.variable} ${mono.variable}`}>
+    <html lang="en-IN" suppressHydrationWarning className={`${sans.variable} ${mono.variable}`}>
       <body className="min-h-dvh">
         <a
           href="#main"

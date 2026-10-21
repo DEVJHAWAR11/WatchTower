@@ -328,7 +328,7 @@ export function AlertBody({ alert }: { alert: Alert }) {
         <figure className="flex gap-3 text-[13.5px] text-ink-2">
           <Quote className="h-4 w-4 shrink-0 text-ink-3" aria-hidden />
           <div>
-            <blockquote className="italic">“{alert.evidence}”</blockquote>
+            <blockquote>“{alert.evidence}”</blockquote>
             <figcaption className="mt-1 text-[12px] text-ink-3">
               Evidence quoted from the page{alert.confidence !== null ? ` · confidence ${Math.round((alert.confidence || 0) * 100)}%` : ""} · decided by{" "}
               {alert.decided_by === "rule" ? "rules" : "AI"}

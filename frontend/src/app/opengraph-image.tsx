@@ -16,7 +16,7 @@ export default function OpengraphImage() {
           </div>
           <div style={{ display: "flex", flexDirection: "column", fontSize: 88, lineHeight: 1.02, letterSpacing: -3 }}>
             <span>The web moves.</span>
-            <span style={{ color: "#b5671a", fontStyle: "italic" }}>We keep watch.</span>
+            <span style={{ color: "#b5671a" }}>We keep watch.</span>
           </div>
           <div style={{ fontSize: 28, color: "#3c4741", width: 640 }}>AI agents that watch the web and bring you the signal.</div>
         </div>

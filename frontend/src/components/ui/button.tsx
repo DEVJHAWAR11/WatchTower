@@ -42,7 +42,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(function 
       ref={ref}
       className={cn(
         "relative inline-flex select-none items-center justify-center whitespace-nowrap rounded-[3px] font-medium transition-[background-color,border-color,color,transform,box-shadow] duration-150 active:translate-y-px disabled:pointer-events-none disabled:opacity-50",
-        mono && "font-mono text-[12.5px] tracking-[0.02em] [font-variation-settings:'wdth'_87]",
+        mono && "font-mono text-[12.5px] tracking-[0.02em]",
         variants[variant],
         sizes[size],
         className,

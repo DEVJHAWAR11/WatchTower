@@ -111,9 +111,9 @@
   --color-info: var(--info);
   --color-focus: var(--focus);
 
-  --font-sans: var(--font-grotesk), ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-newsreader), "Iowan Old Style", Georgia, serif;
-  --font-mono: var(--font-martian), ui-monospace, "SFMono-Regular", monospace;
+  --font-sans: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, "SFMono-Regular", monospace;
 
   --shadow-card: var(--shadow);
   --shadow-float: var(--shadow-lg);
@@ -153,8 +153,7 @@
     background: var(--bg);
     color: var(--ink);
     font-family: var(--font-sans);
-    font-feature-settings: "ss01", "cv11";
-  }
+    }
   ::selection {
     background: var(--amber);
     color: var(--on-amber);
@@ -167,6 +166,9 @@
   button:not(:disabled),
   [role="button"]:not([aria-disabled="true"]) {
     cursor: pointer;
+  }
+  em {
+    font-style: normal;
   }
   h1, h2, h3 {
     text-wrap: balance;
@@ -188,9 +190,8 @@
 /* ------------------------------------------------------------------ type */
 @utility font-display {
   font-family: var(--font-display);
-  font-optical-sizing: auto;
-  font-variation-settings: "opsz" 72;
-  letter-spacing: -0.025em;
+  font-weight: 560;
+  letter-spacing: -0.035em;
 }
 
 /* Instrument-panel labels: "[01]  ALWAYS ON ACROSS THE WEB" */
@@ -200,17 +201,21 @@
   line-height: 1.5;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  font-variation-settings: "wdth" 87;
 }
 
 @utility mono-tight {
   font-family: var(--font-mono);
-  font-variation-settings: "wdth" 80;
   letter-spacing: -0.01em;
 }
 
+/* Skip layout and paint for below-the-fold sections until they approach the viewport */
+@utility defer-paint {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 900px;
+}
+
 @utility accent {
-  font-style: italic;
+  font-style: normal;
   color: var(--accent-display);
 }
 
@@ -307,7 +312,7 @@
 /* Long-form text (legal, docs) */
 .prose-wt { color: var(--ink-2); font-size: 1.0625rem; line-height: 1.75; }
 .prose-wt > * + * { margin-top: 1.1em; }
-.prose-wt h2 { font-family: var(--font-display); font-variation-settings: "opsz" 48; color: var(--ink); font-size: 1.9rem; line-height: 1.15; margin-top: 2em; letter-spacing: -0.015em; }
+.prose-wt h2 { font-family: var(--font-display); font-weight: 560; color: var(--ink); font-size: 1.9rem; line-height: 1.15; margin-top: 2em; letter-spacing: -0.015em; }
 .prose-wt h3 { color: var(--ink); font-weight: 600; font-size: 1.1rem; margin-top: 1.6em; }
 .prose-wt ul { list-style: none; padding: 0; }
 .prose-wt ul li { position: relative; padding-left: 1.4em; margin-top: 0.5em; }
