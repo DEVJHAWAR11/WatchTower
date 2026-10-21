@@ -15,6 +15,7 @@ import uuid
 from collections.abc import AsyncIterator
 from typing import Annotated
 
+import anyio
 from fastapi import APIRouter, Header, Query, Request
 from fastapi.responses import StreamingResponse
 
@@ -30,6 +31,8 @@ from app.services.watches import get_watch_for_user
 router = APIRouter(prefix="/stream", tags=["realtime"])
 MAX_STREAMS_PER_USER = 6
 HEARTBEAT = 15
+# How long one XREAD blocks before the loop re-checks the connection and whether a ping is due.
+POLL = 2
 # Each open stream holds a lease it renews every heartbeat. A connection that vanished without a clean close
 # (proxy hiccup, killed process) stops renewing and frees its slot after LEASE seconds instead of an hour.
 LEASE = HEARTBEAT * 3
@@ -106,11 +109,12 @@ async def stream(
         try:
             yield b"retry: 3000\n\n"
             yield f"event: ready\ndata: {json.dumps({'streams': len(streams)})}\nid: {_encode_pos(positions)}\n\n".encode()
+            last_beat = time.monotonic()
             while True:
                 if await request.is_disconnected():
                     break
                 try:
-                    res = await r.xread(positions, block=HEARTBEAT * 1000, count=100)
+                    res = await r.xread(positions, block=POLL * 1000, count=100)
                 except asyncio.CancelledError:
                     raise
                 except Exception:
@@ -138,7 +142,10 @@ async def stream(
                     yield (f"id: {_encode_pos(positions)}\nevent: {ev.get('type', 'message')}\n"
                            f"data: {json.dumps(payload, default=str)}\n\n").encode()
         finally:
-            await r.zrem(leases, conn_id)
+            # Starlette cancels this task when the client leaves; shield the cleanup or the await is cancelled too
+            # and the slot stays taken until its lease expires.
+            with anyio.CancelScope(shield=True):
+                await r.zrem(leases, conn_id)
 
     return StreamingResponse(gen(), media_type="text/event-stream",
                              headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no", "Connection": "keep-alive"})
