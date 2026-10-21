@@ -117,12 +117,16 @@ function ProfileTab({ me }: { me: Profile }) {
   const [tz, setTz] = useState(me.timezone);
   const [locale, setLocale] = useState(me.locale);
   const zones = useMemo(() => {
+    let supported: string[] = [];
     try {
-      return (Intl as unknown as { supportedValuesOf: (k: string) => string[] }).supportedValuesOf("timeZone");
+      supported = (Intl as unknown as { supportedValuesOf: (k: string) => string[] }).supportedValuesOf("timeZone");
     } catch {
-      return ["Asia/Kolkata", "UTC"];
+      // older browsers: fall back to the short list below
     }
-  }, []);
+    // Browsers list canonical names (Chrome has Asia/Calcutta, not Asia/Kolkata), so make sure the saved zone and
+    // the India default are always selectable.
+    return Array.from(new Set(["Asia/Kolkata", me.timezone, "UTC", ...supported]));
+  }, [me.timezone]);
 
   const save = (e: React.FormEvent) => {
     e.preventDefault();

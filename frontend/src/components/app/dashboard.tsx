@@ -201,10 +201,10 @@ export function Dashboard() {
             <>
               {/* desktop table */}
               <div className="mt-1 hidden overflow-x-auto md:block">
-                <table className="w-full min-w-[860px] border-collapse text-left">
+                <table className="w-full min-w-[860px] table-fixed border-collapse text-left">
                   <thead>
                     <tr className="label-mono border-b border-line text-[10px] text-ink-3">
-                      <th scope="col" className="w-16 py-4 pl-3 font-normal">Status</th>
+                      <th scope="col" className="w-24 py-4 pl-4 font-normal">Status</th>
                       <th scope="col" className="py-4 font-normal">Watch</th>
                       <th scope="col" className="w-48 py-4 font-normal">Last checked</th>
                       <th scope="col" className="w-36 py-4 font-normal">Next check</th>

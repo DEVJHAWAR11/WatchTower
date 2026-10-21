@@ -41,5 +41,10 @@ export default function PricingPage() {
 
 async function PlansTable() {
   const plans = await getPlans();
-  return <Pricing plans={plans} showTable />;
+  return (
+    <>
+      <h2 className="sr-only">Plans and prices</h2>
+      <Pricing plans={plans} showTable />
+    </>
+  );
 }

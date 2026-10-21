@@ -58,7 +58,7 @@ export function StatsStrip() {
   const items = [
     { icon: Globe2, label: "Sources per watch", value: "Up to 5" },
     { icon: RadarIcon, label: "Fastest check", value: "15 min" },
-    { icon: Bell, label: "Alert channels", value: "Email · Push · Telegram" },
+    { icon: Bell, label: "Email, push, Telegram", value: "3 channels" },
     { icon: Clock, label: "Next scheduler sweep", value: <SchedulerTick /> },
   ];
   return (
@@ -91,7 +91,7 @@ export function HowItWorks() {
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { once: true, margin: "-120px" });
   return (
-    <section id="how-it-works" aria-labelledby="how-title" className="relative scroll-mt-20 overflow-hidden py-24 sm:py-32">
+    <section id="how-it-works" aria-labelledby="how-title" className="defer-paint relative scroll-mt-20 overflow-hidden py-24 sm:py-32">
       <Topo stars={false} />
       <div className="relative mx-auto max-w-[1440px] px-4 sm:px-8 lg:px-12">
         <div className="grid gap-10 lg:grid-cols-[1.4fr_1fr] lg:items-end">
@@ -179,7 +179,7 @@ export function LiveDemo() {
   const shown = LOG.slice(0, Math.min(n, LOG.length));
 
   return (
-    <section aria-labelledby="live-title" className="relative border-y border-line bg-elevated/40 py-24 sm:py-28">
+    <section aria-labelledby="live-title" className="defer-paint relative border-y border-line bg-elevated/40 py-24 sm:py-28">
       <div className="mx-auto grid max-w-[1440px] gap-14 px-4 sm:px-8 lg:grid-cols-[1fr_1.15fr] lg:items-center lg:px-12">
         <Reveal>
           <SectionLabel index={3}>The live view</SectionLabel>
@@ -252,7 +252,7 @@ export function LiveDemo() {
 export function AlertPreview() {
   const [state, setState] = useState<"idle" | "approved" | "dismissed">("idle");
   return (
-    <section aria-labelledby="alert-title" className="relative overflow-hidden py-24 sm:py-32">
+    <section aria-labelledby="alert-title" className="defer-paint relative overflow-hidden py-24 sm:py-32">
       <Topo />
       <div className="relative mx-auto grid max-w-[1440px] gap-16 px-4 sm:px-8 lg:grid-cols-[1fr_1.1fr] lg:items-center lg:px-12">
         <Reveal>
@@ -357,7 +357,7 @@ export function AlertPreview() {
 // ------------------------------------------------------------------ closing call to action
 export function ClosingCta({ signedInHref }: { signedInHref?: string }) {
   return (
-    <section aria-labelledby="cta-title" className="relative overflow-hidden border-t border-line">
+    <section aria-labelledby="cta-title" className="defer-paint relative overflow-hidden border-t border-line">
       <div className="absolute inset-x-0 bottom-0 h-[78%]">
         <ObservatoryScene />
       </div>
@@ -408,7 +408,7 @@ const FAQ = [
 
 export function Faq() {
   return (
-    <section aria-labelledby="faq-title" className="mx-auto max-w-[1100px] px-4 py-24 sm:px-8">
+    <section aria-labelledby="faq-title" className="defer-paint mx-auto max-w-[1100px] px-4 py-24 sm:px-8">
       <SectionLabel index={7}>Questions</SectionLabel>
       <h2 id="faq-title" className="mt-6 font-display text-[clamp(2.2rem,4.6vw,3.8rem)] leading-none text-ink">
         Good to <em className="accent">know.</em>
