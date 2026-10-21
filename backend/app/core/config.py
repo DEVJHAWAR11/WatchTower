@@ -23,7 +23,7 @@ class Settings(BaseSettings):
     log_json: bool = True
 
     # --- datastores ---
-    database_url: str = "postgresql+asyncpg://postgres:postgres@127.0.0.1:54329/watchtower"
+    database_url: str = "postgresql+asyncpg://postgres:postgres@127.0.0.1:15432/watchtower"
     db_pool_size: int = 10
     db_max_overflow: int = 20
     redis_url: str = "redis://127.0.0.1:6379/0"

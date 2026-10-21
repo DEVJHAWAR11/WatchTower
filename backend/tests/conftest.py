@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import os
 
-TEST_DB = os.environ.get("TEST_DATABASE_URL", "postgresql+asyncpg://postgres:postgres@127.0.0.1:54329/watchtower_test")
+TEST_DB = os.environ.get("TEST_DATABASE_URL", "postgresql+asyncpg://postgres:postgres@127.0.0.1:15432/watchtower_test")
 TEST_REDIS = os.environ.get("TEST_REDIS_URL", "redis://127.0.0.1:6379/15")
 os.environ.update({
     "WT_ENV": "test",

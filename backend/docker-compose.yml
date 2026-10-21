@@ -17,7 +17,7 @@ services:
     environment:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: watchtower
-    ports: ["${WT_PG_PORT:-54329}:5432"]
+    ports: ["${WT_PG_PORT:-15432}:5432"]
     volumes: [pgdata:/var/lib/postgresql/data]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
