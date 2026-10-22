@@ -35,6 +35,11 @@ const TAGLINES: Record<string, string> = {
   pro: "For power users, teams and builders.",
 };
 
+function withDefaults(p: Plan): Plan {
+  const base = FALLBACK_PLANS.find((f) => f.id === p.id) ?? FALLBACK_PLANS[0];
+  return { ...base, ...p, limits: { ...base.limits, ...p.limits } };
+}
+
 function money(p: Plan, yearly: boolean, inr: boolean): string {
   const inrPrice = yearly ? p.price_inr_year : p.price_inr_month;
   if (inr && inrPrice) return `₹${inrPrice.toLocaleString("en-IN")}`;
@@ -110,7 +115,8 @@ export function Pricing({
   onSelect?: (choice: PlanChoice) => void;
   busyPlan?: string | null;
 }) {
-  const list = plans && plans.length ? plans : FALLBACK_PLANS;
+  // Fill anything the API omits (an older deploy, say) from the built-in defaults so the page never breaks.
+  const list = plans && plans.length ? plans.map(withDefaults) : FALLBACK_PLANS;
   const [yearly, setYearly] = useState(false);
   // Default to rupees for visitors in India (the server render stays in dollars); they can switch either way.
   const inIndia = useSyncExternalStore(subscribeNever, detectIndia, () => false);
