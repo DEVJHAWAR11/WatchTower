@@ -159,6 +159,13 @@ async def test_checkout_portal_cancel_and_plan_change(client, auth, make_user, r
     assert (await client.get("/v1/billing", headers=h)).json()["cancel_at_period_end"] is True
     assert (await client.post("/v1/billing/resume", headers=h)).json() == {"cancel_at_period_end": False}
 
+    # switching plans while the subscription is set to end resumes it first
+    await client.post("/v1/billing/cancel", headers=h)
+    n = len(patch.calls)
+    assert (await client.post("/v1/billing/checkout", headers=h, json={"plan_id": "pro", "interval": "year"})).json() == {"changed": True}
+    assert len(patch.calls) == n + 1 and json.loads(patch.calls.last.request.content) == {"cancel_at_next_billing_date": False}
+    assert (await client.get("/v1/billing", headers=h)).json()["cancel_at_period_end"] is False
+
     respx_mock.post("https://test.dodopayments.com/customers/cus_9/customer-portal/session").mock(
         return_value=httpx.Response(200, json={"link": "https://portal.example/s/1"}))
     assert (await client.post("/v1/billing/portal", headers=h)).json() == {"url": "https://portal.example/s/1"}

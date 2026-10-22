@@ -98,6 +98,9 @@ async def start_checkout(p: Profile, plan_id: str, interval: str, currency: str,
     if _has_live_subscription(p):
         if p.plan_id == plan_id and p.billing_interval == interval:
             raise Conflict("You're already on that plan")
+        if p.billing_cancel_at_period_end:
+            # Dodo refuses plan changes on a subscription that's scheduled to end, so pick it back up first.
+            await set_cancel_at_period_end(p, False, http=http)
         await _dodo("POST", f"/subscriptions/{p.billing_subscription_id}/change-plan", http=http,
                     json={"product_id": product_id, "quantity": 1, "proration_billing_mode": "prorated_immediately"})
         return {"changed": True}
