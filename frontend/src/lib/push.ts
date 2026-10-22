@@ -29,7 +29,15 @@ export async function enablePush(vapidPublicKey: string): Promise<void> {
   await navigator.serviceWorker.ready;
   let sub = await reg.pushManager.getSubscription();
   if (!sub) {
-    sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(vapidPublicKey) });
+    try {
+      sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(vapidPublicKey) });
+    } catch (e) {
+      // The browser's own push service (FCM in Chrome/Brave/Edge) refused the registration.
+      if (e instanceof DOMException && e.name === "AbortError") {
+        throw new Error("Your browser couldn't reach its push service. In Brave, turn on \"Use Google Services for push messaging\" (brave://settings/privacy); otherwise check for a VPN or blocker, then try again.");
+      }
+      throw e;
+    }
   }
   const json = sub.toJSON() as { endpoint: string; keys: { p256dh: string; auth: string } };
   await api("notifications/push", { body: { endpoint: json.endpoint, keys: json.keys, user_agent: navigator.userAgent.slice(0, 250) } });
