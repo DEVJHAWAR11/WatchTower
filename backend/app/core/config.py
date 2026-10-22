@@ -129,6 +129,9 @@ class Settings(BaseSettings):
     act_timeout_seconds: float = 90.0
     fanout_chunk_size: int = 500
     worker_metrics_port: int = 9100
+    # Run the arq workers and the scheduler inside the API process (single-instance hosts such as Render free).
+    embedded_workers: bool = False
+    embedded_max_jobs: int = 4
 
     # --- observability ---
     otel_exporter_otlp_endpoint: str | None = None

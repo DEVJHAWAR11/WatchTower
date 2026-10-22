@@ -50,7 +50,15 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     configure_logging(s.log_level, s.log_json)
     setup_tracing("watchtower-api", app=app, engine=get_engine())
     log.info("api_started", env=s.env)
+    embedded = None
+    if s.embedded_workers:
+        from app.workers.embedded import EmbeddedWorkers
+
+        embedded = EmbeddedWorkers()
+        embedded.start()
     yield
+    if embedded is not None:
+        await embedded.stop()
     from app.services.intake import close_intake_graph
 
     await close_intake_graph()

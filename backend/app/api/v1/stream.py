@@ -109,7 +109,6 @@ async def stream(
         try:
             yield b"retry: 3000\n\n"
             yield f"event: ready\ndata: {json.dumps({'streams': len(streams)})}\nid: {_encode_pos(positions)}\n\n".encode()
-            last_beat = time.monotonic()
             while True:
                 if await request.is_disconnected():
                     break

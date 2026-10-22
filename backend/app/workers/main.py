@@ -65,11 +65,12 @@ async def _shutdown(ctx: dict[str, Any]) -> None:
     await close_intake_graph()
 
 
-def build_worker(name: str) -> Worker:
+def build_worker(name: str, max_jobs_cap: int | None = None) -> Worker:
     cfg = QUEUE_CONFIG[name]
+    max_jobs = cfg["max_jobs"] if max_jobs_cap is None else min(cfg["max_jobs"], max_jobs_cap)
     return Worker(
         functions=cfg["functions"], queue_name=cfg["queue"], redis_settings=redis_settings(),
-        max_jobs=cfg["max_jobs"], job_timeout=cfg["job_timeout"], keep_result=600, max_tries=3,
+        max_jobs=max_jobs, job_timeout=cfg["job_timeout"], keep_result=600, max_tries=3,
         cron_jobs=cfg.get("cron_jobs"), on_startup=_startup, on_shutdown=_shutdown, handle_signals=False,
         health_check_interval=30,
     )

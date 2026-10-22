@@ -68,17 +68,8 @@ async def tick() -> int:
     return len(rows)
 
 
-async def main() -> None:
+async def run_loop(stop: asyncio.Event) -> None:
     s = get_settings()
-    configure_logging(s.log_level, s.log_json)
-    setup_tracing("watchtower-scheduler")
-    with contextlib.suppress(OSError):
-        start_http_server(s.worker_metrics_port + 1)
-    stop = asyncio.Event()
-    loop = asyncio.get_running_loop()
-    for sig in (signal.SIGINT, signal.SIGTERM):
-        with contextlib.suppress(NotImplementedError):  # Windows
-            loop.add_signal_handler(sig, stop.set)
     log.info("scheduler_started", tick=s.scheduler_tick_seconds)
     while not stop.is_set():
         try:
@@ -90,6 +81,20 @@ async def main() -> None:
         if claimed < s.scheduler_batch_size:
             with contextlib.suppress(TimeoutError):
                 await asyncio.wait_for(stop.wait(), timeout=s.scheduler_tick_seconds)
+
+
+async def main() -> None:
+    s = get_settings()
+    configure_logging(s.log_level, s.log_json)
+    setup_tracing("watchtower-scheduler")
+    with contextlib.suppress(OSError):
+        start_http_server(s.worker_metrics_port + 1)
+    stop = asyncio.Event()
+    loop = asyncio.get_running_loop()
+    for sig in (signal.SIGINT, signal.SIGTERM):
+        with contextlib.suppress(NotImplementedError):  # Windows
+            loop.add_signal_handler(sig, stop.set)
+    await run_loop(stop)
     await close_pool()
     await dispose_engine()
 
