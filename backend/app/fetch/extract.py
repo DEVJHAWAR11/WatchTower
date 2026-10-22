@@ -17,7 +17,7 @@ MAX_TEXT_CHARS = 200_000
 MAX_LINKS = 500
 
 _DROP_TAGS = ("script", "style", "noscript", "template", "svg", "canvas", "iframe", "object", "embed",
-              "head", "audio", "video", "picture", "source", "track", "map", "button", "select", "textarea", "form")
+              "head", "audio", "video", "picture", "source", "track", "map", "button", "select", "textarea")  # not "form": ASP.NET sites wrap the whole page in one
 _CHROME_SELECTORS = ("nav", "footer", "[role=navigation]", "[role=contentinfo]", "[aria-label*=cookie i]",
                      "[id*=cookie i]", "[class*=cookie-banner i]", "[class*=cookie-consent i]")
 _HIDDEN_STYLE = re.compile(

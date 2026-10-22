@@ -47,6 +47,16 @@ def test_extract_html_strips_hidden_and_scripts() -> None:
     assert "JE | 1,200" in ext.text
 
 
+def test_extract_reads_pages_wrapped_in_one_form() -> None:
+    # ASP.NET sites (RBI, SEBI) put the whole page inside a single <form runat="server">
+    html = ('<html><body><form method="post" action="./x.aspx"><input type="hidden" name="__VIEWSTATE" value="abc">'
+            '<div><h1>Press Releases</h1><a href="/p/1">RBI revises UPI limits</a><button>Go</button></div></form></body></html>')
+    ext = extract_html(html, "https://rbi.org.in/")
+    assert "Press Releases" in ext.text and "RBI revises UPI limits" in ext.text
+    assert "abc" not in ext.text and "Go" not in ext.text
+    assert [link["href"] for link in ext.links] == ["https://rbi.org.in/p/1"]
+
+
 def test_extract_selector() -> None:
     ext = extract_html(HTML, "https://x.in/", selector="ul li")
     assert "CGL 2026" in ext.text and "Latest Notices" not in ext.text
