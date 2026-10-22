@@ -44,7 +44,7 @@ from app.schemas.api import (
     WatchOut,
 )
 from app.services.community import transfer_public_watches
-from app.services.plans import count_owned_watches, count_subscriptions, plan_for, usage_value
+from app.services.plans import count_owned_watches, count_subscriptions, plan_for, plan_out, usage_value
 from app.services.supabase import get_supabase_auth
 
 router = APIRouter(tags=["account"])
@@ -89,8 +89,7 @@ async def update_settings(body: SettingsIn, user: CurrentUser, session: DB) -> P
 @router.get("/plans", response_model=list[PlanOut])
 async def plans(session: DB) -> list[PlanOut]:
     rows = (await session.execute(select(Plan).where(Plan.is_public.is_(True)).order_by(Plan.sort))).scalars()
-    return [PlanOut(id=p.id, name=p.name, price_usd_month=float(p.price_usd_month), price_usd_year=float(p.price_usd_year),
-                    limits=p.limits, features=p.features) for p in rows]
+    return [plan_out(p, p.limits, p.features) for p in rows]
 
 
 @router.get("/me/usage", response_model=UsageOut)
@@ -98,8 +97,8 @@ async def usage(user: CurrentUser, session: DB) -> UsageOut:
     plan = await plan_for(session, user)
     p = await session.get(Plan, plan.id)
     return UsageOut(
-        plan=PlanOut(id=p.id, name=p.name, price_usd_month=float(p.price_usd_month),
-                     price_usd_year=float(p.price_usd_year), limits=plan.limits, features=plan.features),
+        plan=plan_out(p, plan.limits, plan.features),
+        checks_this_month=await usage_value(session, user.id, "checks", "month"),
         watches=await count_owned_watches(session, user.id),
         subscriptions=await count_subscriptions(session, user.id),
         acts_this_month=await usage_value(session, user.id, "acts", "month"),

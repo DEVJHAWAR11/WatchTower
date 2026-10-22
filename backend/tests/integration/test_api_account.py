@@ -96,7 +96,8 @@ async def test_suspended_user_blocked(client, auth, make_user) -> None:  # noqa:
 async def test_plans_and_usage(client, auth, make_user) -> None:  # noqa: ANN001
     r = await client.get("/v1/plans")
     plans = {p["id"]: p for p in r.json()}
-    assert plans["free"]["price_usd_month"] == 0 and plans["plus"]["price_usd_month"] == 2
+    assert plans["free"]["price_usd_month"] == 0 and plans["plus"]["price_usd_month"] == 9
+    assert plans["pro"]["price_inr_year"] == 8499 and plans["free"]["limits"]["checks_per_month"] == 1000
     assert plans["pro"]["limits"]["min_interval_seconds"] == 900
     u = await make_user()
     r = await client.get("/v1/me/usage", headers=auth(u))

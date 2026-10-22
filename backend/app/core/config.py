@@ -66,7 +66,7 @@ class Settings(BaseSettings):
             "llama-3.1-8b-instant": (0.05, 0.08),
         }
     )
-    llm_daily_budget_usd: float = 10.0  # soft cap: free tier degrades to rule-only beyond this
+    llm_daily_budget_usd: float = 3.0  # soft cap: free tier degrades to rule-only beyond this
     llm_hard_budget_multiplier: float = 2.0  # hard cap for everyone
     llm_cache_ttl_seconds: int = 7 * 24 * 3600
     # Groq account limits per model: (requests/day, tokens/minute). "*" is the default for unlisted models.
@@ -119,6 +119,15 @@ class Settings(BaseSettings):
     telegram_api_base: str = "https://api.telegram.org"
     default_max_alerts_per_hour: int = 6
 
+    # --- billing (Dodo Payments) ---
+    dodo_api_key: SecretStr = SecretStr("")
+    dodo_mode: Literal["test", "live"] = "test"
+    dodo_webhook_secret: SecretStr = SecretStr("")
+    # Product ids per plan and billing period: {"plus_month": "pdt_...", "plus_year": "...", "pro_month": "...",
+    # "pro_year": "..."}; add "_inr" variants ("plus_month_inr") to charge Indian customers in rupees.
+    dodo_products: dict[str, str] = Field(default_factory=dict)
+    billing_grace_days: int = 3  # keep a plan this long past the renewal date while a payment is retried
+
     # --- scheduler / workers ---
     scheduler_tick_seconds: float = 5.0
     scheduler_batch_size: int = 500
@@ -164,6 +173,14 @@ class Settings(BaseSettings):
     @property
     def jwks_url(self) -> str:
         return self.supabase_jwks_url or f"{self.supabase_url.rstrip('/')}/auth/v1/.well-known/jwks.json"
+
+    @property
+    def billing_enabled(self) -> bool:
+        return bool(self.dodo_api_key.get_secret_value() and self.dodo_products)
+
+    @property
+    def dodo_base_url(self) -> str:
+        return "https://live.dodopayments.com" if self.dodo_mode == "live" else "https://test.dodopayments.com"
 
     @property
     def jwt_issuer(self) -> str:

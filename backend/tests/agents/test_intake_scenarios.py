@@ -212,11 +212,13 @@ async def test_intake_daily_quota(llm, make_user) -> None:  # noqa: ANN001
     from app.core.errors import QuotaExceeded
     from app.models import Profile
     from app.services.intake import start_intake
+    from app.services.plans import plan_for
 
     user = await make_user()
     async with session_scope() as s:
         prof = await s.get(Profile, user.id)
-        for i in range(10):
+        daily = (await plan_for(s, prof)).limit("intake_per_day")
+        for i in range(daily):
             await start_intake(s, prof, f"query number {i}")
     with pytest.raises(QuotaExceeded):
         async with session_scope() as s:

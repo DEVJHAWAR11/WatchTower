@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import QuotaExceeded
 from app.models import Plan, Profile, Subscription, Watch
+from app.schemas.api import PlanOut
 
 _CACHE: dict[str, tuple[float, dict[str, Any], dict[str, Any]]] = {}
 _TTL = 60.0
@@ -20,7 +21,7 @@ _TTL = 60.0
 DEFAULT_LIMITS = {
     "max_watches": 5, "max_subscriptions": 25, "min_interval_seconds": 21600, "acts_per_month": 20,
     "intake_per_day": 10, "run_now_per_day": 3, "llm_tokens_per_day": 150000, "retention_days": 30,
-    "max_sources_per_watch": 2, "max_alerts_per_hour": 6,
+    "max_sources_per_watch": 2, "max_alerts_per_hour": 6, "checks_per_month": 1000,
 }
 
 
@@ -35,6 +36,12 @@ class PlanInfo:
 
     def feature(self, key: str) -> Any:
         return self.features.get(key)
+
+
+def plan_out(p: Plan, limits: dict[str, Any], features: dict[str, Any]) -> PlanOut:
+    return PlanOut(id=p.id, name=p.name, price_usd_month=float(p.price_usd_month), price_usd_year=float(p.price_usd_year),
+                   price_inr_month=float(p.price_inr_month), price_inr_year=float(p.price_inr_year),
+                   limits=limits, features=features)
 
 
 def effective_plan_id(profile: Profile) -> str:
@@ -67,6 +74,12 @@ async def plan_for(session: AsyncSession, profile: Profile) -> PlanInfo:
 def period_start(period: str, today: date | None = None) -> date:
     d = today or datetime.now(UTC).date()
     return d.replace(day=1) if period == "month" else d
+
+
+def next_month_start(now: datetime | None = None) -> datetime:
+    n = now or datetime.now(UTC)
+    year, month = (n.year + 1, 1) if n.month == 12 else (n.year, n.month + 1)
+    return datetime(year, month, 1, tzinfo=UTC)
 
 
 async def consume(session: AsyncSession, user_id: uuid.UUID, metric: str, period: str, limit: int,

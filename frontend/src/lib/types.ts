@@ -69,6 +69,8 @@ export interface Plan {
   name: string;
   price_usd_month: number;
   price_usd_year: number;
+  price_inr_month?: number;
+  price_inr_year?: number;
   limits: PlanLimits;
   features: PlanFeatures;
 }
@@ -81,6 +83,18 @@ export interface Usage {
   intake_today: number;
   run_now_today: number;
   llm_tokens_today: number;
+  checks_this_month?: number;
+}
+
+export interface Billing {
+  enabled: boolean;
+  mode: "test" | "live" | string;
+  plan_id: string;
+  interval: "month" | "year" | null;
+  status: string | null;
+  renews_at: ISODate | null;
+  cancel_at_period_end: boolean;
+  has_subscription: boolean;
 }
 
 export interface ApiToken {

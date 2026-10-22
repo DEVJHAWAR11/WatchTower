@@ -12,6 +12,7 @@ import { api, newIdempotencyKey } from "./api";
 import type {
   Alert,
   ApiToken,
+  Billing,
   Category,
   Channels,
   Collection,
@@ -40,6 +41,7 @@ export const qk = {
   tokens: ["me", "tokens"] as const,
   channels: ["channels"] as const,
   plans: ["plans"] as const,
+  billing: ["me", "billing"] as const,
   watchState: (id: string) => ["watch", id, "state"] as const,
   watchRuns: (id: string, outcome?: string) => ["watch", id, "runs", outcome || "all"] as const,
   run: (id: string, runId: string) => ["watch", id, "run", runId] as const,
@@ -60,6 +62,9 @@ export function useMe(enabled = true) {
 }
 export function useUsage() {
   return useQuery({ queryKey: qk.usage, queryFn: () => api<Usage>("me/usage"), staleTime: 30_000 });
+}
+export function useBilling() {
+  return useQuery({ queryKey: qk.billing, queryFn: () => api<Billing>("billing"), staleTime: 30_000 });
 }
 export function usePlans() {
   return useQuery({ queryKey: qk.plans, queryFn: () => api<Plan[]>("plans"), staleTime: 10 * 60_000 });

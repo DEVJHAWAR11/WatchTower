@@ -138,6 +138,8 @@ class PlanOut(BaseModel):
     name: str
     price_usd_month: float
     price_usd_year: float
+    price_inr_month: float = 0
+    price_inr_year: float = 0
     limits: dict[str, Any]
     features: dict[str, Any]
 
@@ -150,6 +152,24 @@ class UsageOut(BaseModel):
     intake_today: int
     run_now_today: int
     llm_tokens_today: int
+    checks_this_month: int = 0
+
+
+class CheckoutIn(BaseModel):
+    plan_id: Literal["plus", "pro"]
+    interval: Literal["month", "year"] = "month"
+    currency: Literal["usd", "inr"] = "usd"
+
+
+class BillingOut(BaseModel):
+    enabled: bool
+    mode: str
+    plan_id: str
+    interval: str | None = None
+    status: str | None = None
+    renews_at: datetime | None = None
+    cancel_at_period_end: bool = False
+    has_subscription: bool = False
 
 
 class PlanRequestIn(BaseModel):

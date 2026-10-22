@@ -111,13 +111,16 @@ async def test_budgets(groq, respx_mock) -> None:  # noqa: ANN001
         await groq.structured(purpose="t", tier="smart", system="s", user="u6", schema=Out, user_id=uid,
                               token_limit_per_day=1000)
     assert e.value.code == "user_budget"
-    await record_usage("m", "p", 0, 0, 10.5)  # > soft cap ($10)
+    from app.core.config import get_settings
+
+    soft = get_settings().llm_daily_budget_usd
+    await record_usage("m", "p", 0, 0, soft + 0.5)  # just past the soft cap
     with pytest.raises(LLMBudgetExceeded) as e:
         await groq.structured(purpose="t", tier="smart", system="s", user="u7", schema=Out, plan_id="free")
     assert e.value.code == "global_budget_soft"
     r = await groq.structured(purpose="t", tier="smart", system="s", user="u8", schema=Out, plan_id="plus")
     assert r.data.answer == "a"  # paid plans keep working until the hard cap
-    await record_usage("m", "p", 0, 0, 10.0)
+    await record_usage("m", "p", 0, 0, soft)  # total now beyond the hard cap (2x soft)
     with pytest.raises(LLMBudgetExceeded) as e:
         await groq.structured(purpose="t", tier="smart", system="s", user="u9", schema=Out, plan_id="pro")
     assert e.value.code == "global_budget_hard"

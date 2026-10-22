@@ -22,6 +22,7 @@ from app.api.v1 import (
     admin,
     alerts,
     auth,
+    billing,
     explore,
     intake,
     me,
@@ -179,7 +180,7 @@ def create_app() -> FastAPI:
                 return Response(status_code=401)
         return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
-    for r in (auth.router, me.router, intake.router, watches.router, alerts.router, explore.router,
+    for r in (auth.router, billing.router, me.router, intake.router, watches.router, alerts.router, explore.router,
               notifications.router, stream.router, public.router, webhooks.router, admin.router):
         app.include_router(r, prefix="/v1")
     return app

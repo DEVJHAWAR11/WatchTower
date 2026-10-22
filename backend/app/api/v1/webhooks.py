@@ -24,6 +24,7 @@ from app.core.logging import get_logger
 from app.core.redis import get_redis, sliding_window_allow
 from app.models import Alert, AuditLog, EmailSuppression, Feedback, Profile, Subscription, TelegramLink
 from app.notify.channels import DeliveryFailure, telegram_sender
+from app.services import billing
 
 router = APIRouter(tags=["webhooks"])
 log = get_logger(__name__)
@@ -183,6 +184,27 @@ async def resend_webhook(request: Request, session: DB,
             if reason == "complaint":
                 await session.execute(update(Profile).where(Profile.email == email).values(email_alerts_enabled=False))
     return {"ok": True}
+
+
+# ------------------------------------------------------------------ Dodo Payments (subscription events)
+@router.post("/webhooks/dodo")
+async def dodo_webhook(request: Request, session: DB,
+                       webhook_id: Annotated[str | None, Header()] = None,
+                       webhook_timestamp: Annotated[str | None, Header()] = None,
+                       webhook_signature: Annotated[str | None, Header()] = None) -> dict[str, Any]:
+    body = await request.body()
+    secret = get_settings().dodo_webhook_secret.get_secret_value()
+    if not verify_standard_webhook(secret, webhook_id or "", webhook_timestamp or "", webhook_signature or "", body):
+        raise Unauthorized("bad signature")
+    try:
+        ev = json.loads(body)
+    except ValueError:
+        return {"ok": True, "result": "ignored"}
+    etype = str(ev.get("type") or "")
+    result = "ignored"
+    if etype.startswith("subscription."):
+        result = await billing.apply_subscription_event(session, etype, ev.get("data") or {})
+    return {"ok": True, "result": result}
 
 
 # ------------------------------------------------------------------ Supabase "before user created" auth hook

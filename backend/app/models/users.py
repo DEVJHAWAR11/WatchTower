@@ -30,6 +30,8 @@ class Plan(Base):
     name: Mapped[str] = mapped_column(String(64))
     price_usd_month: Mapped[float] = mapped_column(Numeric(8, 2), default=0)
     price_usd_year: Mapped[float] = mapped_column(Numeric(8, 2), default=0)
+    price_inr_month: Mapped[float] = mapped_column(Numeric(10, 2), default=0)
+    price_inr_year: Mapped[float] = mapped_column(Numeric(10, 2), default=0)
     limits: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
     features: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
     is_public: Mapped[bool] = mapped_column(Boolean, default=True)
@@ -51,6 +53,11 @@ class Profile(Base):
     locale: Mapped[str] = mapped_column(String(16), default="en-IN")
     plan_id: Mapped[str] = mapped_column(ForeignKey("plans.id"), default="free")
     plan_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    billing_customer_id: Mapped[str | None] = mapped_column(String(64), index=True)
+    billing_subscription_id: Mapped[str | None] = mapped_column(String(64), index=True)
+    billing_interval: Mapped[str | None] = mapped_column(String(8))  # month | year
+    billing_status: Mapped[str | None] = mapped_column(String(16))
+    billing_cancel_at_period_end: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     role: Mapped[str] = mapped_column(String(16), default="user")  # user | admin
     status: Mapped[str] = mapped_column(String(16), default="active")  # active | suspended | deleted
     status_reason: Mapped[str | None] = mapped_column(Text)

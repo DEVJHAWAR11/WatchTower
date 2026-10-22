@@ -9,12 +9,14 @@ from typing import Any
 
 from sqlalchemy import select, update
 
-from app.agents.evaluate import run_evaluation
+from app.agents.evaluate import COMMUNITY_SUBSCRIBERS, run_evaluation
 from app.core.config import get_settings
 from app.core.db import session_scope
+from app.core.errors import QuotaExceeded
 from app.core.logging import get_logger
-from app.models import Check, Watch, WatchVersion
+from app.models import Check, Profile, Watch, WatchVersion
 from app.realtime.events import publish_watch
+from app.services.plans import consume, next_month_start, plan_for
 from app.workers.queue import Q_AGENTS, enqueue
 
 log = get_logger(__name__)
@@ -62,6 +64,18 @@ async def run_check(ctx: dict[str, Any] | None, check_id: str, lease_token: str)
                 chk.lease_token = None
                 return {"skipped": "expired"}
         trigger = "manual" if chk.priority > 0 else "schedule"
+        community = w.visibility == "public" and w.subscriber_count >= COMMUNITY_SUBSCRIBERS
+        owner = None if community or trigger == "manual" else await s.get(Profile, w.owner_id)
+        if owner is not None:
+            # Scheduled checks count against the owner's monthly allowance; shared community watches are free to run.
+            plan = await plan_for(s, owner)
+            try:
+                await consume(s, owner.id, "checks", "month", plan.limit("checks_per_month"))
+            except QuotaExceeded:
+                chk.next_run_at = next_month_start() + timedelta(seconds=random.uniform(0, 6 * 3600))
+                chk.lease_until = None
+                chk.lease_token = None
+                return {"skipped": "checks_cap"}
         watch_id = w.id
 
     try:

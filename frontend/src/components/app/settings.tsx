@@ -21,14 +21,14 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
-import { Pricing } from "@/components/marketing/pricing";
+import { Pricing, type PlanChoice } from "@/components/marketing/pricing";
 import { Button } from "@/components/ui/button";
 import { Badge, Card, ErrorState, Meter, Skeleton, StatusDot } from "@/components/ui/display";
 import { Field, Input, NativeSelect } from "@/components/ui/field";
 import { Dialog, DialogContent, Switch, Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/primitives";
 import { PageLoader } from "@/components/ui/spinner";
 import { ApiError, api, errorMessage } from "@/lib/api";
-import { qk, useApiTokens, useChannels, useDeliveries, useMe, usePlans, useUpdateSettings, useUsage } from "@/lib/queries";
+import { qk, useApiTokens, useBilling, useChannels, useDeliveries, useMe, usePlans, useUpdateSettings, useUsage } from "@/lib/queries";
 import { currentPushSubscription, disablePush, enablePush, pushSupported } from "@/lib/push";
 import type { Channel, Profile } from "@/lib/types";
 import { formatDate, relativeTime } from "@/lib/utils";
@@ -570,13 +570,64 @@ function TelegramRow({ available, linked, username, isDefault, onDefault }: { av
 function PlanTab({ me }: { me: Profile }) {
   const usage = useUsage();
   const plans = usePlans();
+  const billing = useBilling();
+  const qc = useQueryClient();
+  const router = useRouter();
   const sp = useSearchParams();
   const wanted = sp.get("upgrade");
   const [requestFor, setRequestFor] = useState<string | null>(wanted && wanted !== me.plan_id ? wanted : null);
+  const [busyPlan, setBusyPlan] = useState<string | null>(null);
   const u = usage.data;
+  const b = billing.data;
+  const paymentsOn = Boolean(b?.enabled);
+
+  const refresh = () => {
+    qc.invalidateQueries({ queryKey: qk.billing });
+    qc.invalidateQueries({ queryKey: qk.usage });
+    qc.invalidateQueries({ queryKey: qk.me });
+  };
+
+  // Back from the hosted checkout: the plan switches when the payment webhook lands, so poll for a short while.
+  const returned = sp.get("checkout") === "done";
+  useEffect(() => {
+    if (!returned) return;
+    toast.success("Payment received. Your plan switches over in a few seconds.");
+    router.replace("/settings?tab=plan");
+    let n = 0;
+    const t = setInterval(() => {
+      refresh();
+      if (++n >= 10) clearInterval(t);
+    }, 3000);
+    return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [returned]);
+
+  const choose = async (c: PlanChoice) => {
+    if (!paymentsOn) {
+      setRequestFor(c.planId);
+      return;
+    }
+    setBusyPlan(c.planId);
+    try {
+      const r = await api<{ checkout_url?: string; changed?: boolean }>("billing/checkout", {
+        body: { plan_id: c.planId, interval: c.interval, currency: c.currency },
+      });
+      if (r.checkout_url) {
+        window.location.assign(r.checkout_url);
+        return;
+      }
+      toast.success("Plan change requested. It takes effect in a moment.");
+      refresh();
+    } catch (e) {
+      toast.error(errorMessage(e));
+    } finally {
+      setBusyPlan(null);
+    }
+  };
+
   return (
     <div>
-      <Section title="Current plan" description={me.plan_expires_at ? `Renews or ends on ${formatDate(me.plan_expires_at)}.` : undefined}>
+      <Section title="Current plan" description={b?.renews_at ? `${b.cancel_at_period_end ? "Ends" : "Renews"} on ${formatDate(b.renews_at)}.` : me.plan_expires_at ? `Renews or ends on ${formatDate(me.plan_expires_at)}.` : undefined}>
         {usage.isError ? (
           <ErrorState error={usage.error} onRetry={() => usage.refetch()} />
         ) : !u ? (
@@ -590,6 +641,7 @@ function PlanTab({ me }: { me: Profile }) {
             <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2">
               <Meter label="Your watches" value={u.watches} max={u.plan.limits.max_watches} />
               <Meter label="Community subscriptions" value={u.subscriptions} max={u.plan.limits.max_subscriptions} />
+              <Meter label="Checks this month" value={u.checks_this_month ?? 0} max={u.plan.limits.checks_per_month} format={(n) => n.toLocaleString("en-IN")} />
               <Meter label="Follow-up actions this month" value={u.acts_this_month} max={u.plan.limits.acts_per_month} />
               <Meter label="Watches set up today" value={u.intake_today} max={u.plan.limits.intake_per_day} />
               <Meter label="Manual checks today" value={u.run_now_today} max={u.plan.limits.run_now_per_day} />
@@ -598,11 +650,17 @@ function PlanTab({ me }: { me: Profile }) {
           </Card>
         )}
       </Section>
+      {b?.has_subscription && <SubscriptionCard billing={b} onChanged={refresh} />}
       <section className="pt-9">
         <h2 className="font-display text-[26px] text-ink">Plans</h2>
-        <p className="mt-1 text-[14px] text-ink-2">Online payments are coming soon. Until then, request a plan and we&apos;ll switch you over, usually within a day.</p>
+        <p className="mt-1 text-[14px] text-ink-2">
+          {paymentsOn
+            ? "Pay securely with card, UPI or net banking. You can switch or cancel any time."
+            : "Online payments are coming soon. Until then, request a plan and we'll switch you over, usually within a day."}
+          {b?.mode === "test" && paymentsOn ? " Payments are in test mode right now." : ""}
+        </p>
         <div className="mt-8">
-          {plans.isPending ? <Skeleton className="h-96 w-full" /> : <PlanPicker plans={plans.data ?? null} current={me.plan_id} onRequest={setRequestFor} />}
+          {plans.isPending ? <Skeleton className="h-96 w-full" /> : <Pricing plans={plans.data ?? null} currentPlan={b?.plan_id ?? me.plan_id} onSelect={choose} busyPlan={busyPlan} />}
         </div>
       </section>
       <PlanRequestDialog planId={requestFor} onClose={() => setRequestFor(null)} />
@@ -610,22 +668,60 @@ function PlanTab({ me }: { me: Profile }) {
   );
 }
 
-function PlanPicker({ plans, current, onRequest }: { plans: import("@/lib/types").Plan[] | null; current: string; onRequest: (id: string) => void }) {
-  // Reuse the public pricing cards; intercept the upgrade links so they open the request dialog instead.
+function SubscriptionCard({ billing, onChanged }: { billing: import("@/lib/types").Billing; onChanged: () => void }) {
+  const [busy, setBusy] = useState<"portal" | "cancel" | "resume" | null>(null);
+  const trouble = billing.status === "on_hold" || billing.status === "failed" || billing.status === "past_due";
+  const run = async (what: "portal" | "cancel" | "resume") => {
+    setBusy(what);
+    try {
+      const r = await api<{ url?: string }>(`billing/${what}`, { method: "POST" });
+      if (what === "portal" && r.url) {
+        window.location.assign(r.url);
+        return;
+      }
+      toast.success(what === "cancel" ? "Your plan will end after the current period." : "Welcome back, your plan will keep renewing.");
+      onChanged();
+    } catch (e) {
+      toast.error(errorMessage(e));
+    } finally {
+      setBusy(null);
+    }
+  };
   return (
-    <div
-      onClickCapture={(e) => {
-        const a = (e.target as HTMLElement).closest("a");
-        const m = a?.getAttribute("href")?.match(/upgrade=(\w+)/);
-        if (m) {
-          e.preventDefault();
-          e.stopPropagation();
-          onRequest(m[1]);
-        }
-      }}
-    >
-      <Pricing plans={plans} currentPlan={current} />
-    </div>
+    <section className="pt-9">
+      <h2 className="font-display text-[26px] text-ink">Billing</h2>
+      <Card className="mt-4 p-6">
+        {trouble && (
+          <p className="mb-4 flex items-start gap-2 border border-amber/60 bg-amber-soft/50 p-3 text-[14px] text-ink">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber" aria-hidden />
+            Your last payment didn&apos;t go through. Update your payment method to keep your plan.
+          </p>
+        )}
+        <p className="text-[15px] text-ink-2">
+          {billing.cancel_at_period_end
+            ? `Your plan is set to end${billing.renews_at ? ` on ${formatDate(billing.renews_at)}` : ""}. You keep everything until then.`
+            : billing.interval
+              ? `Billed ${billing.interval === "year" ? "yearly" : "monthly"}${billing.renews_at ? `, next renewal around ${formatDate(billing.renews_at)}` : ""}.`
+              : "Manage your payment method, invoices and plan in the billing portal."}
+        </p>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Button variant="outline" onClick={() => run("portal")} loading={busy === "portal"}>
+            <ExternalLink className="h-4 w-4" /> Payment method & invoices
+          </Button>
+          {billing.cancel_at_period_end ? (
+            <Button variant="subtle" onClick={() => run("resume")} loading={busy === "resume"}>
+              Keep my plan
+            </Button>
+          ) : (
+            billing.status === "active" && (
+              <Button variant="ghost" onClick={() => run("cancel")} loading={busy === "cancel"}>
+                Cancel at period end
+              </Button>
+            )
+          )}
+        </div>
+      </Card>
+    </section>
   );
 }
 

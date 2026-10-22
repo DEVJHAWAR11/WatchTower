@@ -7,6 +7,7 @@ guard stays fully active), a scriptable fake LLM, and respx for third-party HTTP
 
 from __future__ import annotations
 
+import json
 import os
 
 TEST_DB = os.environ.get("TEST_DATABASE_URL", "postgresql+asyncpg://postgres:postgres@127.0.0.1:15432/watchtower_test")
@@ -27,6 +28,12 @@ os.environ.update({
     "WT_RESEND_WEBHOOK_SECRET": "whsec_" + "dGVzdHNlY3JldHRlc3RzZWNyZXR0ZXN0c2VjcmV0MTI=",
     "WT_AUTH_HOOK_SECRET": "v1,whsec_dGVzdHNlY3JldHRlc3RzZWNyZXR0ZXN0c2VjcmV0MTI=",
     "WT_EMAIL_PROVIDER": "console",
+    "WT_DODO_API_KEY": "dodo-test-key",
+    "WT_DODO_MODE": "test",
+    "WT_DODO_WEBHOOK_SECRET": "whsec_" + "ZG9kb3Rlc3RzZWNyZXRkb2RvdGVzdHNlY3JldDEyMzQ=",
+    "WT_DODO_PRODUCTS": json.dumps({"plus_month": "pdt_plus_month", "plus_year": "pdt_plus_year",
+                                    "pro_month": "pdt_pro_month", "pro_year": "pdt_pro_year",
+                                    "pro_month_inr": "pdt_pro_month_inr"}),
 })
 # Real keys (for `pytest -m live`) win over placeholders.
 for _k, _v in {"WT_GROQ_API_KEY": "test-groq", "WT_TAVILY_API_KEY": "test-tavily", "WT_BRAVE_API_KEY": "test-brave"}.items():
