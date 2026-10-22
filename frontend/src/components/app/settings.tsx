@@ -91,7 +91,7 @@ export function SettingsPage() {
 
 function Section({ title, description, children, id }: { title: string; description?: React.ReactNode; children: React.ReactNode; id?: string }) {
   return (
-    <section id={id} className="grid gap-6 border-b border-line py-9 first:pt-0 last:border-0 lg:grid-cols-[280px_1fr]">
+    <section id={id} className="grid grid-cols-1 gap-6 border-b border-line py-9 first:pt-0 last:border-0 lg:grid-cols-[280px_1fr]">
       <div>
         <h2 className="font-display text-[26px] leading-tight text-ink">{title}</h2>
         {description && <div className="mt-1.5 text-[14px] text-ink-2">{description}</div>}
@@ -139,7 +139,7 @@ function ProfileTab({ me }: { me: Profile }) {
     <div>
       <Section title="Profile" description="Your handle appears on watches you publish to Community.">
         <form onSubmit={save} className="space-y-5">
-          <div className="grid gap-5 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
             <Field label="Display name" htmlFor="p-name">
               <Input id="p-name" value={name} onChange={(e) => setName(e.target.value)} maxLength={80} autoComplete="name" />
             </Field>
@@ -150,7 +150,7 @@ function ProfileTab({ me }: { me: Profile }) {
               </div>
             </Field>
           </div>
-          <div className="grid gap-5 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
             <Field label="Time zone" htmlFor="p-tz" hint="Used for quiet hours, digests and deadlines.">
               <NativeSelect id="p-tz" value={tz} onChange={(e) => setTz(e.target.value)}>
                 {zones.map((z) => (
@@ -310,7 +310,7 @@ function NotificationsTab({ me }: { me: Profile }) {
 
       <Section title="Delivery" description="Instant alerts arrive as they happen. Digests bundle everything into one message a day.">
         <div className="space-y-6">
-          <div className="grid gap-5 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
             <Field label="Default delivery" htmlFor="n-mode">
               <NativeSelect id="n-mode" value={me.default_delivery_mode} onChange={(e) => patch({ default_delivery_mode: e.target.value }, "Delivery updated")}>
                 <option value="instant">Instantly</option>
@@ -587,7 +587,7 @@ function PlanTab({ me }: { me: Profile }) {
               <p className="font-display text-[34px] leading-none text-ink">{u.plan.name}</p>
               <p className="text-ink-2">{u.plan.price_usd_month ? `$${u.plan.price_usd_month}/month` : "Free forever"}</p>
             </div>
-            <div className="mt-6 grid gap-5 sm:grid-cols-2">
+            <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2">
               <Meter label="Your watches" value={u.watches} max={u.plan.limits.max_watches} />
               <Meter label="Community subscriptions" value={u.subscriptions} max={u.plan.limits.max_subscriptions} />
               <Meter label="Follow-up actions this month" value={u.acts_this_month} max={u.plan.limits.acts_per_month} />

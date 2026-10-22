@@ -143,7 +143,7 @@ export function ExploreBrowser({
           <SectionLabel index={1} as="h2">
             <span id="trending-title">Trending this week</span>
           </SectionLabel>
-          <ol className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <ol className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {top.map((w, k) => (
               <motion.li key={w.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: k * 0.06 }}>
                 <Link
@@ -199,7 +199,7 @@ export function ExploreBrowser({
         {list.isError ? (
           <ErrorState className="mt-6" error={list.error} onRetry={() => list.refetch()} />
         ) : loading ? (
-          <div className="mt-6 grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
             {Array.from({ length: 8 }, (_, i) => (
               <WatchCardSkeleton key={i} />
             ))}
@@ -223,7 +223,7 @@ export function ExploreBrowser({
             }
           />
         ) : view === "grid" ? (
-          <div className="mt-6 grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
             {items.map((w) => (
               <WatchCard key={w.id} watch={w} layout="compact" subscribed={subscribed.has(w.id)} hrefBase={hrefBase} />
             ))}

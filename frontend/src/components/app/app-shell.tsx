@@ -79,7 +79,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <StreamProvider>
       <div className="min-h-dvh lg:grid lg:grid-cols-[260px_minmax(0,1fr)]">
         <Sidebar pathname={pathname} />
-        <div className="flex min-h-dvh min-w-0 flex-col">
+        <div className="flex min-h-dvh min-w-0 flex-col overflow-x-clip">
           <TopBar pathname={pathname} />
           <main id="main" className="relative flex-1 pb-28 lg:pb-16">
             {children}

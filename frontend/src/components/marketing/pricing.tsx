@@ -94,7 +94,7 @@ export function Pricing({ plans, showTable = false, currentPlan }: { plans: Plan
         </div>
       </div>
 
-      <div className="mt-12 grid gap-5 lg:grid-cols-3">
+      <div className="mt-12 grid grid-cols-1 gap-5 lg:grid-cols-3">
         {list.map((p, k) => {
           const featured = p.id === "plus";
           const price = yearly ? p.price_usd_year : p.price_usd_month;

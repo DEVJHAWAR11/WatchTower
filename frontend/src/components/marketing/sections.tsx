@@ -94,7 +94,7 @@ export function HowItWorks() {
     <section id="how-it-works" aria-labelledby="how-title" className="defer-paint relative scroll-mt-20 overflow-hidden py-24 sm:py-32">
       <Topo stars={false} />
       <div className="relative mx-auto max-w-[1440px] px-4 sm:px-8 lg:px-12">
-        <div className="grid gap-10 lg:grid-cols-[1.4fr_1fr] lg:items-end">
+        <div className="grid grid-cols-1 gap-10 lg:grid-cols-[1.4fr_1fr] lg:items-end">
           <Reveal>
             <SectionLabel index={2}>How it works</SectionLabel>
             <h2 id="how-title" className="mt-6 font-display text-[clamp(2.6rem,5.6vw,5rem)] leading-[0.95] text-ink">
@@ -120,7 +120,7 @@ export function HowItWorks() {
           <svg className="absolute left-0 top-[52px] hidden h-2 w-full lg:block" preserveAspectRatio="none" viewBox="0 0 100 2" aria-hidden>
             <motion.line x1="12" y1="1" x2="88" y2="1" stroke="var(--line-strong)" strokeWidth="0.15" initial={{ pathLength: 0 }} animate={{ pathLength: inView ? 1 : 0 }} transition={{ duration: 1.6, ease }} />
           </svg>
-          <ol className="grid gap-12 sm:grid-cols-2 lg:grid-cols-4 lg:gap-6">
+          <ol className="grid grid-cols-1 gap-12 sm:grid-cols-2 lg:grid-cols-4 lg:gap-6">
             {STEPS.map((s, k) => (
               <motion.li
                 key={s.title}
@@ -180,7 +180,7 @@ export function LiveDemo() {
 
   return (
     <section aria-labelledby="live-title" className="defer-paint relative border-y border-line bg-elevated/40 py-24 sm:py-28">
-      <div className="mx-auto grid max-w-[1440px] gap-14 px-4 sm:px-8 lg:grid-cols-[1fr_1.15fr] lg:items-center lg:px-12">
+      <div className="mx-auto grid grid-cols-1 max-w-[1440px] gap-14 px-4 sm:px-8 lg:grid-cols-[1fr_1.15fr] lg:items-center lg:px-12">
         <Reveal>
           <SectionLabel index={3}>The live view</SectionLabel>
           <h2 id="live-title" className="mt-6 font-display text-[clamp(2.4rem,5vw,4.4rem)] leading-[0.95] text-ink">
@@ -212,15 +212,15 @@ export function LiveDemo() {
               <span className="h-2 w-2 animate-blink rounded-full bg-ok-dot" /> Running
             </span>
           </div>
-          <div className="mt-5 flex items-center gap-1.5 overflow-hidden" aria-label="Check timeline" role="img">
+          <div className="mt-5 flex items-center gap-0.5 overflow-hidden sm:gap-1.5" aria-label="Check timeline" role="img">
             {TIMELINE.map((t, k) => (
-              <span key={k} className="flex flex-1 items-center gap-1.5">
+              <span key={k} className="flex flex-1 items-center gap-0.5 sm:gap-1.5">
                 <span
                   className={cn(
-                    "h-2.5 w-2.5 shrink-0 rounded-full",
+                    "h-2 w-2 shrink-0 rounded-full sm:h-2.5 sm:w-2.5",
                     t === "idle" && "bg-line-strong",
                     t === "ok" && "bg-ok-dot",
-                    t === "amber" && "h-3.5 w-3.5 bg-amber",
+                    t === "amber" && "h-3 w-3 bg-amber sm:h-3.5 sm:w-3.5",
                     t === "err" && "bg-err-dot",
                   )}
                 />
@@ -254,7 +254,7 @@ export function AlertPreview() {
   return (
     <section aria-labelledby="alert-title" className="defer-paint relative overflow-hidden py-24 sm:py-32">
       <Topo />
-      <div className="relative mx-auto grid max-w-[1440px] gap-16 px-4 sm:px-8 lg:grid-cols-[1fr_1.1fr] lg:items-center lg:px-12">
+      <div className="relative mx-auto grid grid-cols-1 max-w-[1440px] gap-16 px-4 sm:px-8 lg:grid-cols-[1fr_1.1fr] lg:items-center lg:px-12">
         <Reveal>
           <SectionLabel index={5}>What an alert looks like</SectionLabel>
           <h2 id="alert-title" className="mt-6 font-display text-[clamp(2.6rem,5.6vw,5rem)] leading-[0.95] text-ink">

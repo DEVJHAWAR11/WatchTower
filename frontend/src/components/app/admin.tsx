@@ -100,7 +100,7 @@ function SystemTab() {
         <Stat label="Alerts · 24h" value={d.totals.alerts_24h} />
         <Stat label="Failed deliveries · 24h" value={d.totals.failed_deliveries_24h} tone={d.totals.failed_deliveries_24h ? "err" : undefined} />
       </div>
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Card className="p-5">
           <h3 className="label-mono text-ink-3">Scheduler & queues</h3>
           <p className="mt-3 text-[15px] text-ink">
@@ -468,7 +468,7 @@ function AuditTab() {
         ) : (
           <ul className="divide-y divide-line border-y border-line">
             {q.data.map((a) => (
-              <li key={a.id} className="grid gap-1 py-3 text-[13.5px] sm:grid-cols-[180px_200px_1fr]">
+              <li key={a.id} className="grid grid-cols-1 gap-1 py-3 text-[13.5px] sm:grid-cols-[180px_200px_1fr]">
                 <span className="text-ink-3">{formatDateTime(a.created_at)}</span>
                 <span className="font-medium text-ink">{a.action}</span>
                 <span className="mono-tight min-w-0 truncate text-[11.5px] text-ink-2">

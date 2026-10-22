@@ -134,7 +134,7 @@ export function IntakeFlow() {
 
   return (
     <PageFrame>
-      <div className="grid gap-10 xl:grid-cols-[minmax(0,1fr)_200px]">
+      <div className="grid grid-cols-1 gap-10 xl:grid-cols-[minmax(0,1fr)_200px]">
         <div className="min-w-0">
           <SectionLabel index={1}>Tell us what to watch</SectionLabel>
           <h1 className="mt-5 font-display text-[clamp(2.4rem,5vw,4.4rem)] leading-[0.96] text-ink">
@@ -524,7 +524,7 @@ function Proposal({ session }: { session: IntakeSession }) {
         </div>
       )}
 
-      <div className="mt-2 grid divide-line md:grid-cols-2 md:divide-x">
+      <div className="mt-2 grid grid-cols-1 divide-line md:grid-cols-2 md:divide-x">
         <Block icon={<FileText />} title="Understood condition" className="md:pr-7">
           {editing ? (
             <div className="space-y-3">
@@ -745,7 +745,7 @@ function Outcome({
 
 function HowItHelps() {
   return (
-    <div className="mt-14 grid gap-px border border-line bg-line sm:grid-cols-3">
+    <div className="mt-14 grid grid-cols-1 gap-px border border-line bg-line sm:grid-cols-3">
       {[
         { icon: CircleHelp, t: "Asks when unsure", d: "Vague requests get one or two quick questions, never a guess." },
         { icon: Globe, t: "Finds official pages", d: "Prefers primary sources, then tests the page live before you confirm." },

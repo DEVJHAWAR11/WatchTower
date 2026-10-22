@@ -55,7 +55,7 @@ function CommunitySection() {
     <section aria-labelledby="community-title" className="defer-paint relative overflow-hidden border-t border-line py-24 sm:py-32">
       <Topo />
       <div className="relative mx-auto max-w-[1440px] px-4 sm:px-8 lg:px-12">
-        <div className="grid gap-8 lg:grid-cols-[1.5fr_1fr] lg:items-end">
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1.5fr_1fr] lg:items-end">
           <Reveal>
             <SectionLabel index={4}>Community watches</SectionLabel>
             <h2 id="community-title" className="mt-6 font-display text-[clamp(2.6rem,5.6vw,5rem)] leading-[0.95] text-ink">
@@ -77,7 +77,7 @@ function CommunitySection() {
         </div>
         <Suspense
           fallback={
-            <div className="mt-12 grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="mt-12 grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
               {Array.from({ length: 8 }, (_, i) => (
                 <WatchCardSkeleton key={i} />
               ))}
@@ -96,7 +96,7 @@ async function CommunityGrid() {
   const items = page?.items ?? [];
   if (items.length >= 3) {
     return (
-      <div className="mt-12 grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mt-12 grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
         {items.map((w, i) => (
           <Reveal key={w.id} delay={(i % 4) * 0.06}>
             <WatchCard watch={w} trending={i === 1} />
@@ -109,7 +109,7 @@ async function CommunityGrid() {
   const list = (cats ?? []).filter((c) => c.slug !== "other").slice(0, 8);
   return (
     <div className="mt-12">
-      <div className="grid gap-px border border-line bg-line sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-px border border-line bg-line sm:grid-cols-2 xl:grid-cols-4">
         {list.map((c) => (
           <Link key={c.slug} href={`/explore?category=${c.slug}`} className="group flex flex-col gap-3 bg-bg p-6 transition-colors hover:bg-elevated">
             <CategoryIcon slug={c.slug} className="h-6 w-6 text-ink" />

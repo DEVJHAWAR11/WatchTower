@@ -167,12 +167,14 @@ export function Dashboard() {
               {counts.subscribed > 0 && <TabsTrigger value="subscribed" count={counts.subscribed}>Subscribed</TabsTrigger>}
             </TabsList>
             <div className="flex items-center gap-2 pb-2">
-              <NativeSelect aria-label="Sort watches" value={sort} onChange={(e) => setSort(e.target.value as Sort)} className="w-48">
-                <option value="updated">Sort by: Last updated</option>
-                <option value="next">Sort by: Next check</option>
-                <option value="alerts">Sort by: Most alerts</option>
-                <option value="name">Sort by: Name</option>
-              </NativeSelect>
+              <div className="min-w-0 flex-1 lg:w-48 lg:flex-none">
+                <NativeSelect aria-label="Sort watches" value={sort} onChange={(e) => setSort(e.target.value as Sort)} className="w-full">
+                  <option value="updated">Sort by: Last updated</option>
+                  <option value="next">Sort by: Next check</option>
+                  <option value="alerts">Sort by: Most alerts</option>
+                  <option value="name">Sort by: Name</option>
+                </NativeSelect>
+              </div>
               <Button asChild mono>
                 <Link href="/watches/new">
                   <Plus className="h-4 w-4" /> New watch

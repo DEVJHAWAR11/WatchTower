@@ -28,7 +28,7 @@ const TASKS = [
 
 function Section({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
   return (
-    <section className="grid gap-5 border-b border-line py-8 first:pt-0 last:border-0 lg:grid-cols-[260px_1fr]">
+    <section className="grid grid-cols-1 gap-5 border-b border-line py-8 first:pt-0 last:border-0 lg:grid-cols-[260px_1fr]">
       <div>
         <h3 className="font-display text-[24px] leading-tight text-ink">{title}</h3>
         {description && <p className="mt-1.5 text-[14px] text-ink-2">{description}</p>}
@@ -100,7 +100,7 @@ function OwnerSettings({ state }: { state: WatchState }) {
           <Field label="Description" htmlFor="w-desc">
             <Textarea id="w-desc" value={description} onChange={(e) => setDescription(e.target.value)} maxLength={1000} rows={3} />
           </Field>
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Category" htmlFor="w-cat">
               <NativeSelect id="w-cat" value={category} onChange={(e) => setCategory(e.target.value)}>
                 <option value="">None</option>
@@ -266,7 +266,7 @@ function SpecEditor({ watchId, spec, minIntervalSeconds, maxSources }: { watchId
           </Button>
         )}
       </Field>
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field label="Check frequency" htmlFor="s-int">
           <NativeSelect id="s-int" value={interval} onChange={(e) => setInterval(Number(e.target.value))}>
             {intervals.map((m) => (

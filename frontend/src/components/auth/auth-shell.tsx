@@ -15,7 +15,7 @@ export function AuthShell({ index, kicker, title, accent, intro, children }: {
   children: React.ReactNode;
 }) {
   return (
-    <div className="grid min-h-dvh lg:grid-cols-[1.08fr_1fr]">
+    <div className="grid grid-cols-1 min-h-dvh lg:grid-cols-[1.08fr_1fr]">
       {/* instrument panel */}
       <aside className="relative hidden h-dvh overflow-hidden border-r border-line lg:sticky lg:top-0 lg:block" aria-hidden>
         <Topo />

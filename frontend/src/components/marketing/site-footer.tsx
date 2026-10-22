@@ -36,7 +36,7 @@ const COLS = [
 export function SiteFooter() {
   return (
     <footer className="defer-paint relative border-t border-line">
-      <div className="mx-auto grid max-w-[1440px] gap-12 px-4 py-16 sm:px-8 lg:grid-cols-[1.2fr_2fr] lg:px-12">
+      <div className="mx-auto grid grid-cols-1 max-w-[1440px] gap-12 px-4 py-16 sm:px-8 lg:grid-cols-[1.2fr_2fr] lg:px-12">
         <div className="space-y-5">
           <Logo />
           <p className="max-w-sm text-[15px] text-ink-2">
@@ -44,7 +44,7 @@ export function SiteFooter() {
           </p>
           <Kicker lines={["// monitor", "// analyze", "// alert"]} />
         </div>
-        <div className="grid gap-10 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-10 sm:grid-cols-3">
           {COLS.map((c) => (
             <div key={c.title}>
               <h2 className="label-mono text-ink-3">{c.title}</h2>

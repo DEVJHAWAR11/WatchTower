@@ -65,7 +65,7 @@ export function Hero() {
   return (
     <section ref={ref} className="relative overflow-hidden" aria-labelledby="hero-title">
       <Topo className="opacity-80" />
-      <div className="relative mx-auto grid max-w-[1440px] gap-6 px-4 pb-10 pt-8 sm:px-8 lg:grid-cols-[minmax(0,1.06fr)_minmax(0,1fr)] lg:gap-4 lg:px-12 lg:pb-0 lg:pt-14">
+      <div className="relative mx-auto grid grid-cols-1 max-w-[1440px] gap-6 px-4 pb-10 pt-8 sm:px-8 lg:grid-cols-[minmax(0,1.06fr)_minmax(0,1fr)] lg:gap-4 lg:px-12 lg:pb-0 lg:pt-14">
         {/* copy */}
         <motion.div style={{ y: textY }} className="relative z-10 flex flex-col">
           <div className="flex items-start gap-10">

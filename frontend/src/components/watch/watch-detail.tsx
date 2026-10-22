@@ -62,7 +62,7 @@ export function WatchDetail({ id }: { id: string }) {
 
   return (
     <PageFrame>
-      <div className="grid gap-10 xl:grid-cols-[minmax(0,1fr)_400px]">
+      <div className="grid grid-cols-1 gap-10 xl:grid-cols-[minmax(0,1fr)_400px]">
         <div className="min-w-0">
           <Link href={owner || w.is_subscribed ? "/dashboard" : "/community"} className="inline-flex items-center gap-2 text-[15px] text-ink-2 hover:text-ink">
             <ArrowLeft className="h-4 w-4" /> {owner || w.is_subscribed ? "Back to my watches" : "Back to community"}
@@ -348,7 +348,7 @@ function AlertHistory({
 function DetailSkeleton() {
   return (
     <PageFrame>
-      <div className="grid gap-10 xl:grid-cols-[minmax(0,1fr)_400px]">
+      <div className="grid grid-cols-1 gap-10 xl:grid-cols-[minmax(0,1fr)_400px]">
         <div className="space-y-5">
           <Skeleton className="h-4 w-40" />
           <Skeleton className="h-4 w-24" />

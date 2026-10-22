@@ -51,7 +51,7 @@ async function Detail({ params }: Props) {
 
   return (
     <>
-      <div className="mt-8 grid gap-10 lg:grid-cols-[1fr_300px]">
+      <div className="mt-8 grid grid-cols-1 gap-10 lg:grid-cols-[1fr_300px]">
         <div>
           <div className="label-mono flex items-center gap-2 text-ink-2">
             <CategoryIcon slug={w.category_slug} kind={w.kind} className="h-4 w-4" /> {cat.label}
