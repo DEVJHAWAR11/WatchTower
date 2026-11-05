@@ -176,6 +176,9 @@ async def apply_subscription_event(session: AsyncSession, event_type: str, data:
     """Apply one Dodo subscription webhook to the owning profile. Safe to repeat: it writes state, not deltas."""
     if event_type not in EVENT_STATUS:
         return "ignored"
+    # Other products on the same Dodo business send their events here too
+    if plan_for_product(data.get("product_id")) is None:
+        return "ignored"
     p = await _find_profile(session, data)
     if p is None:
         log.warning("dodo_unmatched_event", kind=event_type, subscription=data.get("subscription_id"))

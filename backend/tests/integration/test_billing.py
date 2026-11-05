@@ -115,6 +115,15 @@ async def test_unmatched_and_unknown_events_are_acknowledged(client, make_user) 
     assert (await profile(u.id)).plan_id == "free"
 
 
+async def test_events_for_other_products_leave_the_profile_alone(client, make_user) -> None:  # noqa: ANN001
+    u = await make_user()
+    other = sub_event("cancelled", u, product="pdt_someone_elses", status="expired")
+    r = await post_event(client, other)
+    assert r.status_code == 200 and r.json()["result"] == "ignored"
+    p = await profile(u.id)
+    assert p.billing_subscription_id is None and p.billing_status != "expired"
+
+
 @respx.mock(assert_all_mocked=True, assert_all_called=False)
 async def test_checkout_portal_cancel_and_plan_change(client, auth, make_user, respx_mock) -> None:  # noqa: ANN001
     s = get_settings()
